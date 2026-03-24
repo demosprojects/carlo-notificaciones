@@ -1,0 +1,27 @@
+{
+  "name": "Carlo Admin",
+  "short_name": "Carlo Essential",
+  "description": "Panel de administración de Carlo Essential",
+  "start_url": "login.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b1221",
+  "theme_color": "#0b1221",
+  "icons": [
+    {
+      "src": "https://res.cloudinary.com/dkqevscys/image/upload/v1773541304/m9c9n2hvpmmidixvek1s.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "https://res.cloudinary.com/dkqevscys/image/upload/v1773541304/m9c9n2hvpmmidixvek1s.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "gcm_sender_id": "1092306113916",
+  "prefer_related_applications": false
+}

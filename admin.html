@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Panel | Carlo Essential</title>
+    <link rel="icon" href="logo.webp">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Cormorant+Garamond:ital,wght@0,400;0,600;0,700;1,400;1,600;1,700&family=Plus+Jakarta+Sans:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: #050505; color: #eee; }
+        .font-cinzel { font-family: 'Cinzel', serif; }
+        h1, h2, h3, .font-luxury { font-family: 'Cormorant Garamond', serif; }
+        
+        .gold-border { border: 1px solid rgba(212, 175, 55, 0.2); }
+        .gold-text { color: #d4af37; }
+        .bg-gold { background-color: #d4af37; }
+        
+        .modal-glass {
+            background: rgba(10, 10, 10, 0.8);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .toggle-input:checked + .toggle-track { background: #d4af37; }
+        .toggle-input:checked + .toggle-track .toggle-thumb { transform: translateX(16px); background: #000; }
+
+        .upload-zone {
+            aspect-ratio: 1/1;
+            border: 1px dashed rgba(212, 175, 55, 0.3);
+            background: rgba(255, 255, 255, 0.02);
+            transition: all 0.3s ease;
+        }
+        .upload-zone:hover { border-color: #d4af37; background: rgba(212, 175, 55, 0.05); }
+        .upload-zone.has-image { border-style: solid; border-color: #d4af37; }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        .modal-glass::-webkit-scrollbar {
+            width: 4px;
+        }
+        .modal-glass::-webkit-scrollbar-track {
+            background: transparent;
+        }
+        .modal-glass::-webkit-scrollbar-thumb {
+            background: linear-gradient(180deg, #d4af37 0%, rgba(212,175,55,0.3) 100%);
+            border-radius: 99px;
+        }
+        .modal-glass::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(180deg, #e8c84a 0%, #d4af37 100%);
+        }
+        .modal-glass {
+            scrollbar-width: thin;
+            scrollbar-color: #d4af37 transparent;
+        }
+
+        .btn-spinner {
+            display: none;
+            width: 14px; height: 14px;
+            border: 2px solid rgba(0,0,0,0.3);
+            border-top-color: #000;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .btn-loading .btn-text { display: none; }
+        .btn-loading .btn-spinner { display: block; }
+
+        #modal-form {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.88);
+            backdrop-filter: blur(16px);
+            z-index: 110;
+            display: flex;
+            align-items: flex-end;
+            justify-content: center;
+        }
+        #modal-form.hidden { display: none; }
+
+        #modal-inner {
+            width: 100%;
+            max-width: 480px;
+            max-height: 88svh;
+            max-height: 88vh;
+            background: #0f0f0f;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-bottom: none;
+            border-radius: 1.75rem 1.75rem 0 0;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        @media (min-width: 640px) {
+            #modal-form { align-items: center; }
+            #modal-inner {
+                border-radius: 1.75rem;
+                border-bottom: 1px solid rgba(255,255,255,0.07);
+                max-height: 90vh;
+            }
+        }
+
+        #modal-header {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 1.25rem 1rem;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+        }
+        #modal-body {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.1rem 1.25rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+            scrollbar-width: thin;
+            scrollbar-color: #d4af37 transparent;
+        }
+        #modal-body::-webkit-scrollbar { width: 3px; }
+        #modal-body::-webkit-scrollbar-thumb { background: #d4af37; border-radius: 99px; }
+        #modal-footer {
+            flex-shrink: 0;
+            display: flex;
+            gap: 0.75rem;
+            padding: 0.9rem 1.25rem;
+            border-top: 1px solid rgba(255,255,255,0.06);
+        }
+
+        .field-label {
+            display: block;
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.15em;
+            color: #6b7280;
+            margin-bottom: 6px;
+        }
+        .field-input {
+            width: 100%;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.875rem;
+            padding: 0.65rem 0.9rem;
+            font-size: 0.875rem;
+            color: #fff;
+            outline: none;
+            transition: border-color 0.2s;
+        }
+        .field-input:focus { border-color: #d4af37; }
+        select.field-input { background-color: #111; }
+        textarea.field-input { resize: none; }
+
+        .img-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.5rem;
+        }
+        @media (min-width: 400px) {
+            .img-grid { grid-template-columns: repeat(6, 1fr); }
+        }
+
+        .variante-row {
+            background: rgba(255,255,255,0.025);
+            border: 1px solid rgba(255,255,255,0.08);
+            border-radius: 0.875rem;
+            padding: 0.6rem 0.75rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.45rem;
+        }
+        .variante-main {
+            display: flex;
+            gap: 0.5rem;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .variante-row input {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 0.625rem;
+            padding: 0.5rem 0.6rem;
+            font-size: 0.8rem;
+            color: #fff;
+            outline: none;
+        }
+        .variante-row input:focus { border-color: #d4af37; }
+        .variante-nombre { flex: 1; min-width: 120px; font-size: 0.875rem !important; }
+        @media (max-width: 420px) {
+            .variante-nombre { flex: 1 1 100%; order: -1; }
+            .variante-precio-wrap { flex: 1; }
+            .variante-precio { width: 100% !important; }
+        }
+        .variante-precio-wrap { position: relative; flex-shrink: 0; }
+        .variante-precio-wrap span { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #6b7280; font-size: 0.75rem; pointer-events: none; }
+        .variante-precio { width: 6.5rem; padding-left: 1.25rem !important; }
+
+        .variante-oferta-row {
+            display: none;
+            align-items: center;
+            gap: 0.5rem;
+            padding-top: 0.4rem;
+            border-top: 1px solid rgba(212,175,55,0.12);
+            margin-top: 0.1rem;
+        }
+        .variante-oferta-row.visible { display: flex; }
+        .variante-oferta-label {
+            font-size: 9px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.12em;
+            color: #d4af37;
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+        .variante-precio-oferta-wrap { position: relative; flex-shrink: 0; }
+        .variante-precio-oferta-wrap span { position: absolute; left: 0.5rem; top: 50%; transform: translateY(-50%); color: #d4af37; font-size: 0.75rem; pointer-events: none; }
+        .variante-precio-oferta { width: 7rem; padding-left: 1.25rem !important; border-color: rgba(212,175,55,0.35) !important; }
+        .variante-precio-oferta:focus { border-color: #d4af37 !important; }
+        .variante-descuento-preview {
+            font-size: 9px;
+            color: #6b7280;
+            flex: 1;
+            min-width: 0;
+        }
+        .variante-oferta-btn {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            padding: 5px 9px;
+            border-radius: 99px;
+            border: 1px solid rgba(212,175,55,0.25);
+            background: rgba(212,175,55,0.06);
+            color: #7a6520;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .variante-oferta-btn:hover { background: rgba(212,175,55,0.15); color: #d4af37; }
+        .variante-oferta-btn.activa {
+            background: rgba(212,175,55,0.15);
+            border-color: rgba(212,175,55,0.5);
+            color: #d4af37;
+        }
+
+        .variante-stock-btn {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 5px 10px;
+            border-radius: 99px;
+            border: 1px solid;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .variante-stock-btn.con-stock {
+            background: rgba(52, 211, 153, 0.1);
+            border-color: rgba(52, 211, 153, 0.35);
+            color: #34d399;
+        }
+        .variante-stock-btn.con-stock:hover {
+            background: rgba(52, 211, 153, 0.2);
+        }
+        .variante-stock-btn.sin-stock {
+            background: rgba(248, 113, 113, 0.1);
+            border-color: rgba(248, 113, 113, 0.35);
+            color: #f87171;
+        }
+        .variante-stock-btn.sin-stock:hover {
+            background: rgba(248, 113, 113, 0.2);
+        }
+
+        .border-white\/8 { border-color: rgba(255,255,255,0.08); }
+
+        #scroll-top-btn {
+            position: fixed;
+            bottom: 2rem;
+            right: 1.5rem;
+            z-index: 99;
+            width: 44px;
+            height: 44px;
+            border-radius: 50%;
+            background: #d4af37;
+            border: none;
+            color: #000;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 4px 24px rgba(212,175,55,0.3);
+            opacity: 0;
+            pointer-events: none;
+            transform: translateY(12px);
+            transition: opacity 0.3s ease, transform 0.3s ease, background 0.2s ease;
+        }
+        #scroll-top-btn.visible {
+            opacity: 1;
+            pointer-events: all;
+            transform: translateY(0);
+        }
+        #scroll-top-btn:hover {
+            background: #fff;
+        }
+
+        .confirm-modal {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
+            z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        .confirm-modal.show { opacity: 1; pointer-events: all; }
+        .confirm-box {
+            background: #0a0a0a;
+            border: 1px solid rgba(255,255,255,0.07);
+            border-radius: 1.5rem;
+            padding: 2rem 2rem 1.5rem;
+            width: 100%; max-width: 380px;
+            transform: translateY(12px);
+            transition: transform 0.3s cubic-bezier(0.16,1,0.3,1);
+            position: relative;
+            overflow: hidden;
+        }
+        .confirm-modal.show .confirm-box { transform: translateY(0); }
+        .confirm-box::before {
+            content: '';
+            position: absolute; top: 0; left: 15%; right: 15%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #d4af37, transparent);
+        }
+        .confirm-icon {
+            width: 48px; height: 48px;
+            border-radius: 50%;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.1rem;
+            margin: 0 auto 1.25rem;
+        }
+
+        .nav-item.activo {
+            background: rgba(255,255,255,0.05);
+            border: 1px solid rgba(212,175,55,0.3);
+            color: #d4af37;
+            font-weight: 700;
+        }
+
+        .pedido-card { transition: all 0.2s; }
+        .pedido-card:hover { border-color: rgba(212,175,55,0.4); }
+
+        @media (min-width: 640px) {
+            #modal-archivo { align-items: center; padding: 1rem; }
+            #modal-archivo > div {
+                border-radius: 1.75rem !important;
+                border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+                max-height: 85vh !important;
+            }
+            #modal-pedido-detalle {
+                align-items: center !important;
+                padding: 1rem !important;
+            }
+            #modal-pedido-detalle > div {
+                border-radius: 1.75rem !important;
+                border-bottom: 1px solid rgba(255,255,255,0.07) !important;
+                max-height: 85vh !important;
+            }
+        }
+
+        /* Toast notifications */
+        #toast-container {
+            position: fixed;
+            bottom: 5rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            pointer-events: none;
+        }
+        .toast {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 11px 18px;
+            border-radius: 99px;
+            font-size: 11px;
+            font-weight: 700;
+            letter-spacing: 0.05em;
+            pointer-events: all;
+            opacity: 0;
+            transform: translateY(12px) scale(0.97);
+            transition: opacity 0.25s ease, transform 0.25s cubic-bezier(0.16,1,0.3,1);
+            white-space: nowrap;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+        }
+        .toast.show { opacity: 1; transform: translateY(0) scale(1); }
+        .toast.hide { opacity: 0; transform: translateY(-8px) scale(0.97); }
+        .toast-success { background: #0d2b1f; border: 1px solid rgba(52,211,153,0.4); color: #34d399; }
+        .toast-error   { background: #2b0d0d; border: 1px solid rgba(248,113,113,0.4); color: #f87171; }
+        .toast-info    { background: #1a1500; border: 1px solid rgba(212,175,55,0.4); color: #d4af37; }
+
+        /* Modal confirmar eliminar pedido */
+        #modal-confirm-accion {
+            position: fixed; inset: 0;
+            background: rgba(0,0,0,0.85);
+            backdrop-filter: blur(12px);
+            z-index: 300;
+            display: flex; align-items: center; justify-content: center;
+            padding: 1rem;
+            opacity: 0; pointer-events: none;
+            transition: opacity 0.25s ease;
+        }
+        #modal-confirm-accion.show { opacity: 1; pointer-events: all; }
+        #modal-confirm-accion .confirm-box {
+            transform: translateY(14px) scale(0.98);
+            transition: transform 0.3s cubic-bezier(0.16,1,0.3,1), opacity 0.25s ease;
+            opacity: 0;
+        }
+        #modal-confirm-accion.show .confirm-box { transform: translateY(0) scale(1); opacity: 1; }
+
+        /* Estado btn loader */
+        .estado-btn-wrap { position: relative; display: inline-flex; align-items: center; }
+        .estado-btn-spinner {
+            display: none;
+            width: 10px; height: 10px;
+            border: 1.5px solid rgba(255,255,255,0.2);
+            border-top-color: currentColor;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 4px;
+        }
+        .estado-btn-loading .estado-btn-spinner { display: inline-block; }
+        .estado-btn-loading { opacity: 0.7; pointer-events: none; }
+
+        /* Chips de filtro de pedidos */
+        .pedido-chip { cursor: pointer; }
+        .chip-todos    { background: rgba(212,175,55,0.08); border-color: rgba(212,175,55,0.2); color: #6b7280; }
+        .chip-todos.activo    { background: rgba(212,175,55,0.18); border-color: rgba(212,175,55,0.55); color: #d4af37; }
+        .chip-pendiente  { background: rgba(251,191,36,0.06); border-color: rgba(251,191,36,0.18); color: #6b7280; }
+        .chip-pendiente.activo  { background: rgba(251,191,36,0.14); border-color: rgba(251,191,36,0.5); color: #fbbf24; }
+        .chip-contactado { background: rgba(96,165,250,0.06); border-color: rgba(96,165,250,0.18); color: #6b7280; }
+        .chip-contactado.activo { background: rgba(96,165,250,0.14); border-color: rgba(96,165,250,0.5); color: #60a5fa; }
+        .chip-cancelado  { background: rgba(248,113,113,0.06); border-color: rgba(248,113,113,0.18); color: #6b7280; }
+        .chip-cancelado.activo  { background: rgba(248,113,113,0.14); border-color: rgba(248,113,113,0.5); color: #f87171; }
+        .chip-archivo    { background: rgba(52,211,153,0.06); border-color: rgba(52,211,153,0.2); color: #6b7280; }
+        .chip-archivo:hover { background: rgba(52,211,153,0.13); border-color: rgba(52,211,153,0.45); color: #34d399; }
+
+        .estado-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 3px 10px;
+            border-radius: 99px;
+            font-size: 9px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+        }
+        .estado-pendiente  { background: rgba(251,191,36,0.12); color: #fbbf24; border: 1px solid rgba(251,191,36,0.3); }
+        .estado-contactado { background: rgba(96,165,250,0.12); color: #60a5fa; border: 1px solid rgba(96,165,250,0.3); }
+        .estado-completado { background: rgba(52,211,153,0.12); color: #34d399; border: 1px solid rgba(52,211,153,0.3); }
+        .estado-cancelado  { background: rgba(248,113,113,0.12); color: #f87171; border: 1px solid rgba(248,113,113,0.3); }
+    </style>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0b1221">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="RV Admin">
+<link rel="apple-touch-icon" href="https://res.cloudinary.com/dkqevscys/image/upload/v1773541304/m9c9n2hvpmmidixvek1s.webp">
+</head>
+<body class="min-h-screen flex flex-col md:flex-row">
+
+    <aside class="w-full md:w-[280px] md:min-w-[280px] md:flex-shrink-0 bg-[#0a0a0a] border-r border-white/5 flex flex-col z-20 md:h-screen md:sticky md:top-0">
+        <div class="p-10 text-center">
+            <h1 class="text-xl font-cinzel gold-text tracking-widest uppercase">Carlo Essential</h1>
+            <p class="text-[8px] uppercase tracking-[0.4em] text-gray-500 mt-1">Administración</p>
+        </div>
+
+        <nav class="flex-grow px-6 space-y-2">
+            <button onclick="mostrarSeccion('inventario')" id="nav-inventario" class="nav-item w-full flex items-center gap-4 p-4 text-gray-500 hover:text-white transition-all text-xs uppercase tracking-widest rounded-2xl">
+                <i class="fa-solid fa-gem"></i> Inventario
+            </button>
+            <button onclick="mostrarSeccion('pedidos')" id="nav-pedidos" class="nav-item w-full flex items-center justify-between gap-4 p-4 text-gray-500 hover:text-white transition-all text-xs uppercase tracking-widest rounded-2xl">
+                <span class="flex items-center gap-4"><i class="fa-solid fa-bag-shopping"></i> Pedidos</span>
+                <span id="pedidos-badge" class="hidden bg-[#d4af37] text-black text-[8px] font-black px-2 py-0.5 rounded-full min-w-[18px] text-center"></span>
+            </button>
+            <a href="https://carloessential.com.ar" target="_blank" class="flex items-center gap-4 p-4 text-gray-500 hover:text-white transition-all text-xs uppercase tracking-widest">
+                <i class="fa-solid fa-eye"></i> Ver Tienda
+            </a>
+            <button id="btn-logout" class="w-full flex items-center gap-4 p-4 text-red-900/60 hover:text-red-500 transition-all text-xs uppercase tracking-widest mt-10">
+                <i class="fa-solid fa-power-off"></i> Salir
+            </button>
+        </nav>
+    </aside>
+
+    <main class="flex-grow p-6 md:p-12">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-12 gap-6">
+            <div>
+                <h2 class="text-3xl font-luxury text-white">Gestión de <span class="gold-text">productos</span></h2>
+                <p id="stats-text" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-2">Sincronizando...</p>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 w-full lg:w-auto">
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                    <input type="text" id="admin-buscador" placeholder="Buscar pieza..." 
+                        class="bg-white/5 border border-white/10 rounded-full py-3 pl-10 pr-5 text-sm outline-none focus:border-[#d4af37] transition-all w-full lg:w-56">
+                </div>
+                <select id="filtro-categoria" onchange="aplicarFiltros()" class="bg-[#111] border border-white/10 rounded-full py-3 px-5 text-xs outline-none focus:border-[#d4af37] transition-all text-gray-300 appearance-none cursor-pointer">
+                    <option value="">Todas las categorías</option>
+                    <option value="Relojes">Relojes</option>
+                    <option value="Pulseras">Pulseras</option>
+                    <option value="Cadenas">Cadenas</option>
+                    <option value="Llaveros">Llaveros</option>
+                    <option value="Perfumes">Perfumes</option>
+                    <option value="Aros">Aros</option>
+                    <option value="Billeteras">Billeteras</option>
+                </select>
+                <select id="filtro-disponibilidad" onchange="aplicarFiltros()" class="bg-[#111] border border-white/10 rounded-full py-3 px-5 text-xs outline-none focus:border-[#d4af37] transition-all text-gray-300 appearance-none cursor-pointer">
+                    <option value="">Todo el stock</option>
+                    <option value="disponible">Con stock</option>
+                    <option value="sin-stock">Sin stock</option>
+                </select>
+                <button onclick="abrirModalCrear()" class="bg-[#d4af37] text-black px-8 py-3 rounded-full font-black uppercase tracking-widest text-[11px] hover:bg-white transition-all whitespace-nowrap">
+                    + Nuevo producto
+                </button>
+            </div>
+        </div>
+
+        <div id="loader" class="flex flex-col items-center justify-center py-32">
+            <div class="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-[10px] uppercase tracking-[0.3em] text-gray-600">Cargando productos...</p>
+        </div>
+
+        <div id="admin-productos" class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-6 hidden"></div>
+    </main>
+
+    <main id="seccion-pedidos" class="flex-grow p-4 sm:p-6 md:p-12 hidden">
+        <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center mb-6 sm:mb-10 gap-3">
+            <div>
+                <h2 class="text-2xl sm:text-3xl font-luxury text-white">Gestión de <span class="gold-text">pedidos</span></h2>
+                <p id="pedidos-stats" class="text-[10px] text-gray-500 font-bold uppercase tracking-widest mt-1">Sincronizando...</p>
+            </div>
+            <div class="flex flex-col gap-2 w-full lg:w-auto">
+                <!-- Buscador -->
+                <div class="relative">
+                    <i class="fa-solid fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-xs"></i>
+                    <input type="text" id="pedidos-buscador" placeholder="Buscar por nombre o contacto..."
+                        oninput="filtrarPedidos()"
+                        class="bg-white/5 border border-white/10 rounded-full py-3 pl-10 pr-5 text-sm outline-none focus:border-[#d4af37] transition-all w-full">
+                </div>
+                <!-- Chips de estado -->
+                <div class="flex gap-2 items-center overflow-x-auto pb-1 no-scrollbar">
+                    <button onclick="setFiltroEstado('')" id="chip-todos"
+                        class="pedido-chip chip-todos flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-layer-group" style="font-size:8px;"></i> Todos
+                    </button>
+                    <button onclick="setFiltroEstado('pendiente')" id="chip-pendiente"
+                        class="pedido-chip chip-pendiente flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-clock" style="font-size:8px;"></i> Pendiente
+                        <span id="cnt-pendiente" class="ml-1 hidden"></span>
+                    </button>
+                    <button onclick="setFiltroEstado('contactado')" id="chip-contactado"
+                        class="pedido-chip chip-contactado flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-phone" style="font-size:8px;"></i> Contactado
+                        <span id="cnt-contactado" class="ml-1 hidden"></span>
+                    </button>
+                    <button onclick="setFiltroEstado('cancelado')" id="chip-cancelado"
+                        class="pedido-chip chip-cancelado flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-xmark" style="font-size:8px;"></i> Cancelado
+                        <span id="cnt-cancelado" class="ml-1 hidden"></span>
+                    </button>
+                    <div style="width:1px;height:18px;background:rgba(255,255,255,0.08);flex-shrink:0;"></div>
+                    <button onclick="abrirArchivoCompletados()" id="chip-archivo"
+                        class="pedido-chip chip-archivo flex items-center gap-1.5 px-4 py-2 rounded-full text-[10px] font-bold uppercase tracking-widest border transition-all whitespace-nowrap">
+                        <i class="fa-solid fa-box-archive" style="font-size:8px;"></i> Archivo
+                        <span id="cnt-archivo" class="ml-1 hidden"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <div id="pedidos-loader" class="flex flex-col items-center justify-center py-32">
+            <div class="w-8 h-8 border-2 border-[#d4af37] border-t-transparent rounded-full animate-spin mb-4"></div>
+            <p class="text-[10px] uppercase tracking-[0.3em] text-gray-600">Cargando pedidos...</p>
+        </div>
+
+        <div id="pedidos-grid" class="space-y-4 hidden"></div>
+    </main>
+
+    <div id="modal-pedido-detalle" class="confirm-modal" style="align-items:flex-end;padding:0;">
+        <div class="w-full" style="max-width:480px;margin:0 auto;background:#0a0a0a;border:1px solid rgba(255,255,255,0.07);border-bottom:none;border-radius:1.75rem 1.75rem 0 0;overflow:hidden;max-height:92svh;max-height:92vh;display:flex;flex-direction:column;">
+            <div style="height:1px;background:linear-gradient(90deg,transparent,#d4af37,transparent);flex-shrink:0;"></div>
+            <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.75rem;">
+                <h3 class="font-luxury text-xl text-white">Detalle del pedido</h3>
+                <button onclick="cerrarModalConfirm('modal-pedido-detalle')" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-500 hover:text-white text-lg">&times;</button>
+            </div>
+            <div id="detalle-pedido-body" class="space-y-3 overflow-y-auto px-5 pb-2" style="flex:1;scrollbar-width:thin;scrollbar-color:#d4af37 transparent;"></div>
+            <div style="flex-shrink:0;padding:0.75rem 1.25rem 1.25rem;border-top:1px solid rgba(255,255,255,0.05);">
+                <p class="text-[9px] uppercase tracking-widest text-gray-500 mb-2">Cambiar estado</p>
+                <div class="flex flex-wrap gap-2" id="detalle-estados-btns"></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-form" class="hidden">
+        <div id="modal-inner">
+            <div id="modal-header">
+                <h2 id="modal-titulo" class="font-luxury gold-text" style="font-size:1.2rem; line-height:1.2;">Nuevo producto</h2>
+                <button onclick="cerrarModalAdmin()" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:none;color:#9ca3af;font-size:1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">&times;</button>
+            </div>
+
+            <div id="modal-body">
+                <input type="hidden" id="edit-id">
+
+                <div>
+                    <label class="field-label">Nombre del Modelo</label>
+                    <input type="text" id="nombre" class="field-input">
+                </div>
+
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.625rem;">
+                    <div>
+                        <label class="field-label">Precio ($)</label>
+                        <input type="number" id="precio" class="field-input">
+                    </div>
+                    <div>
+                        <label class="field-label">Categoría</label>
+                        <select id="categoria" class="field-input">
+                            <option value="" disabled selected>Elegir categoría</option>
+                            <option value="Relojes">Relojes</option>
+                            <option value="Pulseras">Pulseras</option>
+                            <option value="Cadenas">Cadenas</option>
+                            <option value="Llaveros">Llaveros</option>
+                            <option value="Perfumes">Perfumes</option>
+                            <option value="Aros">Aros</option>
+                            <option value="Billeteras">Billeteras</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="field-label">Imágenes</label>
+                    <div class="img-grid">
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-1" onclick="triggerFileInput(1)">
+                            <input type="file" id="file-input-1" class="hidden" accept="image/*" onchange="handleFileSelect(event,1)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-1" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img1">
+                        </div>
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-2" onclick="triggerFileInput(2)">
+                            <input type="file" id="file-input-2" class="hidden" accept="image/*" onchange="handleFileSelect(event,2)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-2" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img2">
+                        </div>
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-3" onclick="triggerFileInput(3)">
+                            <input type="file" id="file-input-3" class="hidden" accept="image/*" onchange="handleFileSelect(event,3)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-3" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img3">
+                        </div>
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-4" onclick="triggerFileInput(4)">
+                            <input type="file" id="file-input-4" class="hidden" accept="image/*" onchange="handleFileSelect(event,4)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-4" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img4">
+                        </div>
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-5" onclick="triggerFileInput(5)">
+                            <input type="file" id="file-input-5" class="hidden" accept="image/*" onchange="handleFileSelect(event,5)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-5" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img5">
+                        </div>
+                        <div class="upload-zone rounded-xl relative overflow-hidden flex items-center justify-center group cursor-pointer" id="zone-6" onclick="triggerFileInput(6)">
+                            <input type="file" id="file-input-6" class="hidden" accept="image/*" onchange="handleFileSelect(event,6)">
+                            <i class="fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37] text-xs"></i>
+                            <img id="preview-6" class="absolute inset-0 w-full h-full object-cover hidden">
+                            <input type="hidden" id="img6">
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="field-label">Descripción</label>
+                    <textarea id="descripcion" rows="2" class="field-input" placeholder="Descripción del producto..."></textarea>
+                </div>
+
+                <div>
+                    <label class="field-label">Materiales / Tamaño</label>
+                    <textarea id="caracteristicas" rows="2" class="field-input" placeholder="Ej: Acero 316L, 42mm..."></textarea>
+                </div>
+
+                <div style="background:rgba(212,175,55,0.04);border:1px solid rgba(212,175,55,0.15);border-radius:0.875rem;padding:0.7rem 0.9rem;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0;" id="oferta-header">
+                        <div>
+                            <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#d4af37;">En oferta</p>
+                            <p style="font-size:9px;color:#6b7280;margin-top:1px;">Muestra badge y precio tachado en la tienda</p>
+                        </div>
+                        <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;">
+                            <input type="checkbox" id="enOferta" class="sr-only toggle-input" onchange="toggleDescuento()">
+                            <div class="w-11 h-6 bg-gray-800 rounded-full toggle-track transition-all">
+                                <div class="absolute top-[2px] left-[2px] bg-gray-500 w-5 h-5 rounded-full toggle-thumb transition-all"></div>
+                            </div>
+                        </label>
+                    </div>
+                    <div id="campo-descuento" style="display:none;margin-top:0.75rem;padding-top:0.75rem;border-top:1px solid rgba(212,175,55,0.12);">
+                        <label class="field-label" style="color:#d4af37;">Precio de oferta ($)</label>
+                        <input type="number" id="precioOferta" min="1" placeholder="Ej: 2000" class="field-input" style="border-color:rgba(212,175,55,0.3);">
+                        <p id="descuento-preview" style="font-size:9px;color:#6b7280;margin-top:5px;">El precio original se mostrará tachado junto al precio de oferta.</p>
+                    </div>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:0.875rem;padding:0.7rem 0.9rem;">
+                    <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#d1d5db;">Disponible en Stock</p>
+                    <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;">
+                        <input type="checkbox" id="disponible" class="sr-only toggle-input" checked>
+                        <div class="w-11 h-6 bg-gray-800 rounded-full toggle-track transition-all">
+                            <div class="absolute top-[2px] left-[2px] bg-gray-500 w-5 h-5 rounded-full toggle-thumb transition-all"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <div style="display:flex;align-items:center;justify-content:space-between;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.07);border-radius:0.875rem;padding:0.7rem 0.9rem;">
+                    <div>
+                        <p style="font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;color:#d1d5db;">Badge "Nuevo"</p>
+                        <p style="font-size:9px;color:#6b7280;margin-top:1px;">Muestra etiqueta blanca ✦ Nuevo en la tienda</p>
+                    </div>
+                    <label style="position:relative;display:inline-flex;align-items:center;cursor:pointer;">
+                        <input type="checkbox" id="esNuevo" class="sr-only toggle-input">
+                        <div class="w-11 h-6 bg-gray-800 rounded-full toggle-track transition-all">
+                            <div class="absolute top-[2px] left-[2px] bg-gray-500 w-5 h-5 rounded-full toggle-thumb transition-all"></div>
+                        </div>
+                    </label>
+                </div>
+
+                <div>
+                    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:0.5rem;">
+                        <div>
+                            <span style="font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;color:#6b7280;">Variantes</span>
+                            <span style="font-size:9px;color:#374151;margin-left:4px;">· opcional</span>
+                        </div>
+                        <button type="button" onclick="agregarVariante()"
+                            style="display:flex;align-items:center;gap:5px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);color:#d4af37;font-size:9px;font-weight:800;text-transform:uppercase;letter-spacing:0.12em;padding:5px 12px;border-radius:99px;cursor:pointer;transition:background 0.2s;"
+                            onmouseover="this.style.background='rgba(212,175,55,0.2)'" onmouseout="this.style.background='rgba(212,175,55,0.1)'">
+                            <i class="fa-solid fa-plus" style="font-size:8px;"></i> Agregar
+                        </button>
+                    </div>
+                    <div id="variantes-container" style="display:flex;flex-direction:column;gap:0.5rem;"></div>
+                    <p id="variantes-empty" style="color:#374151;font-size:10px;font-style:italic;padding:4px 0;">Sin variantes — se usa el precio principal.</p>
+                </div>
+
+            </div>
+
+            <div id="modal-footer">
+                <button onclick="cerrarModalAdmin()" style="flex:1;padding:0.7rem;color:#6b7280;font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;border:1px solid rgba(255,255,255,0.1);border-radius:99px;background:transparent;cursor:pointer;transition:border-color 0.2s;" onmouseover="this.style.borderColor='rgba(255,255,255,0.25)'" onmouseout="this.style.borderColor='rgba(255,255,255,0.1)'">Cancelar</button>
+                <button onclick="guardarProducto()" id="btn-guardar" style="flex:2;padding:0.7rem;background:#d4af37;color:#000;font-weight:900;font-size:10px;text-transform:uppercase;letter-spacing:0.12em;border:none;border-radius:99px;cursor:pointer;transition:background 0.2s;" onmouseover="this.style.background='#fff'" onmouseout="this.style.background='#d4af37'">
+                    <span class="btn-text">Guardar producto</span>
+                    <div class="btn-spinner"></div>
+                </button>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        function triggerFileInput(n) { document.getElementById(`file-input-${n}`).click(); }
+        
+        function convertirAWebP(file, calidad = 0.88) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                const url = URL.createObjectURL(file);
+                img.onload = () => {
+                    const MAX = 1400;
+                    let { width, height } = img;
+                    if (width > MAX || height > MAX) {
+                        if (width >= height) { height = Math.round(height * MAX / width); width = MAX; }
+                        else                 { width  = Math.round(width  * MAX / height); height = MAX; }
+                    }
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width; canvas.height = height;
+                    canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+                    URL.revokeObjectURL(url);
+                    canvas.toBlob(blob => {
+                        if (blob) resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: 'image/webp' }));
+                        else      reject(new Error('No se pudo convertir a WebP'));
+                    }, 'image/webp', calidad);
+                };
+                img.onerror = () => { URL.revokeObjectURL(url); reject(new Error('No se pudo leer la imagen')); };
+                img.src = url;
+            });
+        }
+
+        async function handleFileSelect(e, n) {
+            const fileOriginal = e.target.files[0];
+            if (!fileOriginal) return;
+
+            const zone = document.getElementById(`zone-${n}`);
+            const icon = zone.querySelector('i');
+            zone.style.opacity = "0.5";
+            if (icon) icon.className = 'fa-solid fa-spinner fa-spin text-[#d4af37]';
+
+            try {
+                const fileWebP = await convertirAWebP(fileOriginal);
+                const formData = new FormData();
+                formData.append("file", fileWebP);
+                formData.append("upload_preset", "uploads");
+
+                const res  = await fetch("https://api.cloudinary.com/v1_1/dkqevscys/image/upload", { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (!data.secure_url) throw new Error(data.error?.message || 'Sin URL');
+
+                document.getElementById(`img${n}`).value = data.secure_url;
+                const prev = document.getElementById(`preview-${n}`);
+                prev.src = data.secure_url;
+                prev.classList.remove('hidden');
+                zone.classList.add('has-image');
+            } catch(err) {
+                console.error('Upload error:', err);
+                alert(`Error subiendo imagen: ${err.message}`);
+            } finally {
+                zone.style.opacity = "1";
+                if (icon) icon.className = 'fa-solid fa-plus text-gray-700 group-hover:text-[#d4af37]';
+            }
+        }
+
+        function resetImageZones() {
+            for(let i=1; i<=6; i++) {
+                const img = document.getElementById(`img${i}`);
+                if(img) img.value = "";
+                const prev = document.getElementById(`preview${i}`);
+                if(prev) prev.classList.add('hidden');
+            }
+        }
+
+        function toggleDescuento() {
+            const on = document.getElementById('enOferta').checked;
+            document.getElementById('campo-descuento').style.display = on ? 'block' : 'none';
+            if (!on) document.getElementById('precioOferta').value = '';
+        }
+
+        function actualizarPreviewDescuento() {
+            const precioOriginal = Number(document.getElementById('precio')?.value) || 0;
+            const precioOferta   = Number(document.getElementById('precioOferta')?.value) || 0;
+            const preview = document.getElementById('descuento-preview');
+            if (!preview) return;
+            if (precioOriginal > 0 && precioOferta > 0 && precioOferta < precioOriginal) {
+                const pct = Math.round((1 - precioOferta / precioOriginal) * 100);
+                preview.textContent = `Ahorro del ${pct}% — de $${precioOriginal.toLocaleString()} a $${precioOferta.toLocaleString()}`;
+                preview.style.color = '#d4af37';
+            } else if (precioOferta >= precioOriginal && precioOriginal > 0) {
+                preview.textContent = '⚠ El precio de oferta debe ser menor al precio original.';
+                preview.style.color = '#f87171';
+            } else {
+                preview.textContent = 'El precio original se mostrará tachado junto al precio de oferta.';
+                preview.style.color = '#6b7280';
+            }
+        }
+
+        document.addEventListener('input', e => {
+            if (e.target.id === 'precioOferta' || e.target.id === 'precio') actualizarPreviewDescuento();
+        });
+
+        window.agregarVariante = function(nombre = '', precio = '', disponible = true, enOferta = false, precioOferta = '', imagen = '') {
+            const container = document.getElementById('variantes-container');
+            const empty = document.getElementById('variantes-empty');
+            if (empty) empty.style.display = 'none';
+
+            const row = document.createElement('div');
+            row.className = 'variante-row';
+
+            let previewTexto = 'Precio oferta (menor al precio base)';
+            let previewColor = '#6b7280';
+            if (enOferta && precioOferta && precio) {
+                const pct = Math.round((1 - Number(precioOferta) / Number(precio)) * 100);
+                if (pct > 0) {
+                    previewTexto = `Ahorro del ${pct}%`;
+                    previewColor = '#d4af37';
+                }
+            }
+
+            const uniqueId = 'vimg_' + Date.now() + '_' + Math.random().toString(36).slice(2,7);
+
+            row.innerHTML = `
+                <div class="variante-main">
+                    <div style="position:relative;flex-shrink:0;width:40px;height:40px;border-radius:0.5rem;overflow:hidden;border:1px dashed rgba(212,175,55,0.35);background:rgba(255,255,255,0.03);cursor:pointer;display:flex;align-items:center;justify-content:center;"
+                         onclick="document.getElementById('${uniqueId}').click()" title="Foto de esta variante">
+                        <input type="file" id="${uniqueId}" class="hidden" accept="image/*" onchange="subirImagenVariante(event, this)">
+                        <i class="fa-solid fa-image" style="font-size:11px;color:#4b5563;" id="${uniqueId}_icon"></i>
+                        <img id="${uniqueId}_preview" src="${imagen || ''}" class="${imagen ? '' : 'hidden'} absolute inset-0 w-full h-full object-cover" style="border-radius:0.5rem;">
+                        <input type="hidden" id="${uniqueId}_url" value="${imagen || ''}">
+                    </div>
+                    <input type="text" placeholder="Nombre (ej: Acero, Oro...)" value="${nombre}" class="variante-nombre">
+                    <div class="variante-precio-wrap">
+                        <span>$</span>
+                        <input type="number" placeholder="Precio" value="${precio}" class="variante-precio"
+                            oninput="actualizarPreviewVariante(this)">
+                    </div>
+                    <button type="button" onclick="toggleOfertaVariante(this)"
+                        class="variante-oferta-btn ${enOferta ? 'activa' : ''}"
+                        title="Agregar precio de oferta">
+                        <i class="fa-solid fa-tag" style="font-size:8px;"></i>
+                        <span>%</span>
+                    </button>
+                    <button type="button" onclick="toggleStockVariante(this)"
+                        class="variante-stock-btn ${disponible !== false ? 'con-stock' : 'sin-stock'}"
+                        data-disponible="${disponible !== false ? 'true' : 'false'}">
+                        <i class="fa-solid ${disponible !== false ? 'fa-circle-check' : 'fa-circle-xmark'}" style="font-size:9px;"></i>
+                        <span>${disponible !== false ? 'Stock' : 'Sin stock'}</span>
+                    </button>
+                    <button type="button" onclick="this.closest('.variante-row').remove(); actualizarEmptyVariantes()"
+                        style="width:28px;height:28px;flex-shrink:0;display:flex;align-items:center;justify-content:center;background:transparent;border:none;color:#4b5563;cursor:pointer;border-radius:0.5rem;transition:color 0.2s;"
+                        onmouseover="this.style.color='#f87171'" onmouseout="this.style.color='#4b5563'">
+                        <i class="fa-solid fa-trash-can" style="font-size:11px;"></i>
+                    </button>
+                </div>
+                <div class="variante-oferta-row ${enOferta ? 'visible' : ''}">
+                    <span class="variante-oferta-label"><i class="fa-solid fa-tag" style="font-size:8px;margin-right:3px;"></i> Precio oferta</span>
+                    <div class="variante-precio-oferta-wrap">
+                        <span>$</span>
+                        <input type="number" placeholder="0" value="${precioOferta || ''}" min="1"
+                            class="variante-precio-oferta"
+                            style="background:rgba(212,175,55,0.06);border:1px solid rgba(212,175,55,0.35);border-radius:0.625rem;padding:0.5rem 0.6rem;font-size:0.8rem;color:#fff;outline:none;width:7rem;padding-left:1.25rem;"
+                            oninput="actualizarPreviewVariante(this)">
+                    </div>
+                    <span class="variante-descuento-preview" style="color:${previewColor};">${previewTexto}</span>
+                </div>
+            `;
+            container.appendChild(row);
+        };
+
+        window.toggleStockVariante = function(btn) {
+            const tieneStock = btn.dataset.disponible === 'true';
+            const nuevoEstado = !tieneStock;
+            btn.dataset.disponible = nuevoEstado ? 'true' : 'false';
+            btn.className = `variante-stock-btn ${nuevoEstado ? 'con-stock' : 'sin-stock'}`;
+            btn.querySelector('i').className = `fa-solid ${nuevoEstado ? 'fa-circle-check' : 'fa-circle-xmark'}`;
+            btn.querySelector('span').textContent = nuevoEstado ? 'Stock' : 'Sin stock';
+        };
+
+        window.toggleOfertaVariante = function(btn) {
+            const row = btn.closest('.variante-row');
+            const ofertaRow = row.querySelector('.variante-oferta-row');
+            const activa = ofertaRow.classList.toggle('visible');
+            btn.classList.toggle('activa', activa);
+            if (!activa) {
+                const input = ofertaRow.querySelector('input');
+                if (input) input.value = '';
+                const preview = ofertaRow.querySelector('.variante-descuento-preview');
+                if (preview) { preview.textContent = 'Precio oferta (menor al precio base)'; preview.style.color = '#6b7280'; }
+            }
+        };
+
+        window.actualizarPreviewVariante = function(inputEl) {
+            const row = inputEl.closest('.variante-row');
+            if (!row) return;
+            const precioBase   = Number(row.querySelector('.variante-precio')?.value) || 0;
+            const precioOferta = Number(row.querySelector('.variante-precio-oferta')?.value) || 0;
+            const preview      = row.querySelector('.variante-descuento-preview');
+            if (!preview) return;
+            if (precioBase > 0 && precioOferta > 0 && precioOferta < precioBase) {
+                const pct = Math.round((1 - precioOferta / precioBase) * 100);
+                preview.textContent = `Ahorro del ${pct}% — de $${precioBase.toLocaleString()} a $${precioOferta.toLocaleString()}`;
+                preview.style.color = '#d4af37';
+            } else if (precioOferta >= precioBase && precioBase > 0) {
+                preview.textContent = '⚠ Debe ser menor al precio base.';
+                preview.style.color = '#f87171';
+            } else {
+                preview.textContent = 'Precio oferta (menor al precio base)';
+                preview.style.color = '#6b7280';
+            }
+        };
+
+        window.actualizarEmptyVariantes = function() {
+            const container = document.getElementById('variantes-container');
+            const empty = document.getElementById('variantes-empty');
+            if (empty) empty.style.display = container.children.length === 0 ? 'block' : 'none';
+        };
+
+        window.subirImagenVariante = async function(e, inputEl) {
+            const fileOriginal = e.target.files[0];
+            if (!fileOriginal) return;
+
+            const zone = inputEl.closest('div[onclick]');
+            const icon = zone ? zone.querySelector('i') : null;
+            const uniqueId = inputEl.id;
+
+            if (zone) zone.style.opacity = '0.5';
+            if (icon) icon.className = 'fa-solid fa-spinner fa-spin';
+
+            try {
+                const fileWebP = await convertirAWebP(fileOriginal);
+                const formData = new FormData();
+                formData.append("file", fileWebP);
+                formData.append("upload_preset", "uploads");
+
+                const res  = await fetch("https://api.cloudinary.com/v1_1/dkqevscys/image/upload", { method: "POST", body: formData });
+                const data = await res.json();
+
+                if (!data.secure_url) throw new Error(data.error?.message || 'Sin URL');
+
+                document.getElementById(`${uniqueId}_url`).value = data.secure_url;
+                const prev = document.getElementById(`${uniqueId}_preview`);
+                if (prev) {
+                    prev.src = data.secure_url;
+                    prev.classList.remove('hidden');
+                }
+                if (zone) { zone.style.border = '1px solid rgba(212,175,55,0.7)'; }
+            } catch(err) {
+                alert(`Error subiendo imagen de variante: ${err.message}`);
+            } finally {
+                if (zone) zone.style.opacity = '1';
+                if (icon) icon.className = 'fa-solid fa-image';
+            }
+        };
+
+        window.obtenerVariantes = function() {
+            const container = document.getElementById('variantes-container');
+            const variantes = [];
+            Array.from(container.children).forEach(row => {
+                if (!row.classList.contains('variante-row')) return;
+                const nombre       = row.querySelector('.variante-nombre')?.value.trim();
+                const precio       = Number(row.querySelector('.variante-precio')?.value);
+                const stockBtn     = row.querySelector('.variante-stock-btn');
+                const disponible   = stockBtn ? stockBtn.dataset.disponible !== 'false' : true;
+                const ofertaRow    = row.querySelector('.variante-oferta-row');
+                const ofertaActiva = ofertaRow?.classList.contains('visible') || false;
+                const precioOferta = ofertaActiva ? (Number(row.querySelector('.variante-precio-oferta')?.value) || 0) : 0;
+                const enOferta     = ofertaActiva && precioOferta > 0 && precioOferta < precio;
+                const urlInput     = row.querySelector('input[id$="_url"]');
+                const imagen       = urlInput ? urlInput.value : '';
+                if (nombre && precio > 0) variantes.push({ nombre, precio, disponible, enOferta, precioOferta: enOferta ? precioOferta : 0, imagen });
+            });
+            return variantes;
+        }
+
+        window.cargarVariantes = function(variantes) {
+            const container = document.getElementById('variantes-container');
+            container.innerHTML = '';
+            actualizarEmptyVariantes();
+            if (variantes && variantes.length > 0) {
+                variantes.forEach(v => agregarVariante(v.nombre, v.precio, v.disponible !== false, v.enOferta === true, v.precioOferta || '', v.imagen || ''));
+            }
+        };
+    </script>
+
+    <div id="modal-logout" class="confirm-modal">
+        <div class="confirm-box text-center">
+            <div class="confirm-icon bg-red-900/20 text-red-400 mx-auto">
+                <i class="fa-solid fa-power-off"></i>
+            </div>
+            <h3 class="font-luxury text-xl text-white mb-2">Cerrar sesión</h3>
+            <p class="text-gray-500 text-xs mb-6 leading-relaxed">¿Seguro que querés salir del panel de administración?</p>
+            <div class="flex gap-3">
+                <button onclick="cerrarModalConfirm('modal-logout')" class="flex-1 py-3 text-gray-500 font-bold uppercase text-[9px] tracking-widest border border-white/5 rounded-full hover:border-white/20 transition-all">Cancelar</button>
+                <button id="btn-confirm-logout" class="flex-1 py-3 bg-red-500/90 text-white font-black uppercase text-[9px] tracking-widest rounded-full hover:bg-red-500 transition-all">
+                    <span class="btn-text">Salir</span>
+                    <div class="btn-spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <div id="modal-eliminar" class="confirm-modal">
+        <div class="confirm-box text-center">
+            <div class="confirm-icon bg-red-900/20 text-red-400 mx-auto">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 class="font-luxury text-xl text-white mb-2">Retirar pieza</h3>
+            <p class="text-gray-500 text-xs mb-1 leading-relaxed">Estás por eliminar</p>
+            <p id="eliminar-nombre" class="text-[#d4af37] font-bold text-sm mb-6 truncate px-4"></p>
+            <p class="text-gray-600 text-[10px] mb-6">Esta acción no se puede deshacer.</p>
+            <div class="flex gap-3">
+                <button onclick="cerrarModalConfirm('modal-eliminar')" class="flex-1 py-3 text-gray-500 font-bold uppercase text-[9px] tracking-widest border border-white/5 rounded-full hover:border-white/20 transition-all">Cancelar</button>
+                <button id="btn-confirm-eliminar" class="flex-1 py-3 bg-red-500/90 text-white font-black uppercase text-[9px] tracking-widest rounded-full hover:bg-red-500 transition-all">
+                    <span class="btn-text">Eliminar</span>
+                    <div class="btn-spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function abrirModalConfirm(id) {
+            document.getElementById(id).classList.add('show');
+        }
+        function cerrarModalConfirm(id) {
+            document.getElementById(id).classList.remove('show');
+        }
+        document.querySelectorAll('.confirm-modal').forEach(m => {
+            m.addEventListener('click', e => {
+                if(e.target === m) cerrarModalConfirm(m.id);
+            });
+        });
+    </script>
+    <button id="scroll-top-btn" title="Volver arriba" onclick="window.scrollTo({top:0,behavior:'smooth'})">
+        <i class="fa-solid fa-chevron-up"></i>
+    </button>
+    <script>
+        (function() {
+            const btn = document.getElementById('scroll-top-btn');
+            window.addEventListener('scroll', () => {
+                btn.classList.toggle('visible', window.scrollY > 300);
+            }, { passive: true });
+        })();
+    </script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js')
+        .then(reg => console.log('[PWA] SW registrado:', reg.scope))
+        .catch(err => console.warn('[PWA] Error al registrar SW:', err));
+    });
+  }
+</script>
+    <!-- MODAL ARCHIVO DE COMPLETADOS -->
+    <div id="modal-archivo" class="confirm-modal" style="align-items:flex-end; padding:0;">
+        <div style="width:100%;max-width:700px;max-height:90svh;max-height:90vh;background:#0a0a0a;border:1px solid rgba(255,255,255,0.07);border-bottom:none;border-radius:1.75rem 1.75rem 0 0;display:flex;flex-direction:column;overflow:hidden;margin:0 auto;">
+            <!-- top line -->
+            <div style="height:1px;background:linear-gradient(90deg,transparent,rgba(52,211,153,0.6),transparent);flex-shrink:0;"></div>
+            <!-- header -->
+            <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.5rem 1rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div>
+                    <h3 class="font-luxury text-xl" style="color:#34d399;">Archivo de completados</h3>
+                    <p id="archivo-stats" class="text-[9px] text-gray-500 font-bold uppercase tracking-widest mt-1">...</p>
+                </div>
+                <button onclick="cerrarModalConfirm('modal-archivo')" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:none;color:#9ca3af;font-size:1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:center;" onmouseover="this.style.color='#fff'" onmouseout="this.style.color='#9ca3af'">&times;</button>
+            </div>
+            <!-- body -->
+            <div id="archivo-body" style="flex:1;overflow-y:auto;padding:1rem 1.5rem 1.5rem;display:flex;flex-direction:column;gap:0.75rem;scrollbar-width:thin;scrollbar-color:#34d399 transparent;"></div>
+        </div>
+    </div>
+
+    <!-- Toast container -->
+    <div id="toast-container"></div>
+
+    <!-- Modal confirmar acción (eliminar pedido) -->
+    <div id="modal-confirm-accion">
+        <div class="confirm-box text-center" style="max-width:360px;width:100%;background:#0a0a0a;border:1px solid rgba(255,255,255,0.07);border-radius:1.5rem;padding:2rem 2rem 1.5rem;position:relative;overflow:hidden;">
+            <div style="position:absolute;top:0;left:15%;right:15%;height:1px;background:linear-gradient(90deg,transparent,#f87171,transparent);"></div>
+            <div id="confirm-accion-icon" class="confirm-icon bg-red-900/20 text-red-400 mx-auto">
+                <i class="fa-solid fa-trash-can"></i>
+            </div>
+            <h3 id="confirm-accion-titulo" class="font-luxury text-xl text-white mb-2">Eliminar pedido</h3>
+            <p id="confirm-accion-texto" class="text-gray-500 text-xs mb-6 leading-relaxed"></p>
+            <div class="flex gap-3">
+                <button onclick="cerrarConfirmAccion()" class="flex-1 py-3 text-gray-500 font-bold uppercase text-[9px] tracking-widest border border-white/5 rounded-full hover:border-white/20 transition-all">Cancelar</button>
+                <button id="btn-confirm-accion-ok" class="flex-1 py-3 bg-red-500/90 text-white font-black uppercase text-[9px] tracking-widest rounded-full hover:bg-red-500 transition-all">
+                    <span class="btn-text">Eliminar</span>
+                    <div class="btn-spinner" style="border-color:rgba(255,255,255,0.3);border-top-color:#fff;"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="admin.js"></script>
+</body>
+</html>

@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CARLO ESSENTIAL</title>
+    <link rel="icon" href="logo.webp">    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">   
+    <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@400;500;600;700&family=Plus+Jakarta+Sans:wght@300;400;600;800&family=Cinzel:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --gold: #d4af37;
+            --dark-bg: #050505;
+            --card-bg: #121212;
+        }
+
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            background-color: var(--dark-bg);
+            color: #ffffff;
+        }
+
+        h1, h2, h3, .font-luxury { 
+            font-family: 'Cormorant Garamond', serif; 
+        }
+
+        /* --- Animaciones y Efectos --- */
+        .glass {
+            background: rgba(18, 18, 18, 0.7);
+            backdrop-filter: blur(15px);
+            -webkit-backdrop-filter: blur(15px);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+
+        .product-card {
+            transition: all 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+            background: var(--card-bg);
+            border: 1px solid rgba(212, 175, 55, 0.1);
+        }
+
+        .product-card:hover {
+            transform: translateY(-10px);
+            border-color: var(--gold);
+            box-shadow: 0 20px 40px rgba(0,0,0,0.6), 0 0 20px rgba(212, 175, 55, 0.1);
+        }
+
+        .gold-gradient-text {
+            background: linear-gradient(to right, #bf953f, #fcf6ba, #b38728, #fbf5b7, #aa771c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .silver-gradient-text {
+            background: linear-gradient(135deg, #2c2c2e, #8c9099, #b8bec7, #6b7280, #1e1e20, #9aa0aa, #c4cad3, #3a3a3c);
+            -webkit-background-clip: text;
+            background-clip: text;
+            -webkit-text-fill-color: transparent;
+            filter: drop-shadow(0 1px 12px rgba(180,190,200,0.3)) drop-shadow(0 0 30px rgba(100,110,120,0.2));
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #050505; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--gold); }
+
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+
+        /* Estilo para los Skeletons Dark */
+        .skeleton {
+            background: linear-gradient(90deg, #121212 25%, #1a1a1a 50%, #121212 75%);
+            background-size: 200% 100%;
+            animation: shimmer 1.5s infinite linear;
+        }
+        @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+        #modal-detalles .modal-card {
+            background: #0a0a0a;
+            border: 1px solid rgba(212, 175, 55, 0.2);
+        }
+
+        body.modal-active {
+            overflow: hidden;
+        }
+
+        @keyframes fadeInScale {
+            from { opacity: 0; transform: scale(0.92); }
+            to   { opacity: 1; transform: scale(1); }
+        }
+        
+    </style>
+</head>
+<body>
+    <nav class="sticky top-0 z-[100] glass border-b border-white/5">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <a href="#" class="flex flex-col items-center">
+                <span class="text-2xl md:text-3xl font-black tracking-widest gold-gradient-text" style="font-family: 'Cinzel', serif;">CARLO ESSENTIAL</span>
+                <span class="text-[8px] uppercase tracking-[0.5em] text-gray-400 -mt-1">Relojes y accesorios</span>
+            </a>
+
+            <div class="flex items-center gap-6">
+                <button onclick="abrirCarrito()" class="relative group">
+                    <i class="fa-solid fa-bag-shopping text-2xl text-gray-300 group-hover:text-white transition-colors"></i>
+                    <span id="cart-count" class="absolute -top-2 -right-2 bg-[#d4af37] text-black text-[10px] font-extrabold rounded-full h-5 w-5 flex items-center justify-center border-2 border-[#050505]">0</span>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- HERO BANNER -->
+    <header class="hero-header relative flex items-center justify-center overflow-hidden">
+
+        <!-- FONDO con parallax -->
+        <div class="absolute inset-0 z-0">
+    <img
+        src="https://res.cloudinary.com/dl2tftoum/image/upload/v1773300124/uaqutu92sebyckoensgn.webp"
+        class="w-full h-[115%] object-cover object-center absolute top-0 will-change-transform blur-[2px] scale-105"
+        id="hero-img" 
+        alt="Carlo Essential Hero">
+
+    <div class="absolute inset-0 bg-gradient-to-b from-[#050505]/75 via-[#050505]/20 to-[#050505] z-10"></div>
+    <div class="absolute inset-0 bg-gradient-to-r from-[#050505]/50 via-transparent to-[#050505]/50 z-10"></div>
+    <div class="absolute inset-0 z-10" style="box-shadow: inset 0 0 160px rgba(0,0,0,0.8);"></div>
+</div>
+
+        <!-- Líneas laterales — solo desktop -->
+        <div class="absolute left-10 top-0 h-full z-20 pointer-events-none hidden lg:flex">
+            <div class="w-px bg-gradient-to-b from-transparent via-[#d4af37]/35 to-transparent h-full"></div>
+        </div>
+        <div class="absolute right-10 top-0 h-full z-20 pointer-events-none hidden lg:flex">
+            <div class="w-px bg-gradient-to-b from-transparent via-[#d4af37]/20 to-transparent h-full"></div>
+        </div>
+
+        <!-- CONTENIDO -->
+        <div class="relative z-30 text-center px-5 w-full max-w-4xl mx-auto">
+            <div class="hero-reveal flex items-center justify-center gap-3 mb-5" style="animation-delay:0.1s">
+                <div class="h-px w-8 bg-[#d4af37]/60"></div>
+                <span class="text-[#d4af37] text-[8px] font-black uppercase tracking-[0.5em]">Colección 2026</span>
+                <div class="h-px w-8 bg-[#d4af37]/60"></div>
+            </div>
+
+     <h1 
+  class="hero-reveal font-luxury font-black text-white mb-6 tracking-tight"
+  style="animation-delay:0.25s; font-size: clamp(3rem, 7vw, 6.2rem); line-height: 0.95;"
+>
+  Accesorios que<br>
+  <span class="silver-gradient-text font-bold">elevan tu estilo</span>
+</h1>
+            <p class="hero-reveal text-gray-400 font-light tracking-[0.4em] uppercase mb-8" style="animation-delay:0.4s; font-size: clamp(0.65rem, 1.5vw, 0.85rem);">
+                Relojes &amp; Accesorios
+            </p>
+
+            <!-- Botón principal -->
+            <div class="hero-reveal flex items-center justify-center mb-6" style="animation-delay:0.6s">
+                <a href="#productos" class="group relative inline-flex items-center gap-2 bg-[#d4af37] text-black px-8 py-3.5 rounded-full font-black uppercase tracking-widest text-[10px] overflow-hidden transition-all duration-500 hover:shadow-[0_0_35px_rgba(212,175,55,0.45)] hover:scale-[1.02] w-full sm:w-auto justify-center">
+                    <span class="relative z-10">Explorar Colección</span>
+                    <i class="fa-solid fa-arrow-right relative z-10 text-[9px] transition-transform duration-300 group-hover:translate-x-1"></i>
+                    <div class="absolute inset-0 bg-white translate-x-[-110%] group-hover:translate-x-0 transition-transform duration-500 ease-in-out"></div>
+                </a>
+            </div>
+
+            <!-- Redes sociales -->
+            <div class="hero-reveal flex items-center justify-center gap-4" style="animation-delay:0.75s">
+                <div class="h-px w-6 bg-white/15"></div>
+                <a href="https://wa.me/+5493624895445" target="_blank" rel="noopener"
+                   class="flex items-center justify-center w-9 h-9 rounded-full border border-white/15 text-white/50 hover:border-[#25D366] hover:text-[#25D366] transition-all duration-300 hover:scale-110 hover:shadow-[0_0_14px_rgba(37,211,102,0.3)]">
+                    <i class="fa-brands fa-whatsapp text-sm"></i>
+                </a>
+                <a href="https://www.instagram.com/carlo.essential/" target="_blank" rel="noopener"
+                   class="flex items-center justify-center w-9 h-9 rounded-full border border-white/15 text-white/50 hover:border-[#E1306C] hover:text-[#E1306C] transition-all duration-300 hover:scale-110 hover:shadow-[0_0_14px_rgba(225,48,108,0.3)]">
+                    <i class="fa-brands fa-instagram text-sm"></i>
+                </a>
+                <div class="h-px w-6 bg-white/15"></div>
+            </div>
+        </div>
+        
+    </header>
+
+    <style>
+        /* Hero compacto y responsivo */
+        .hero-header {
+            height: clamp(460px, 62vh, 660px);
+        }
+        @media (max-width: 640px) {
+            .hero-header { height: clamp(420px, 68vh, 540px); }
+        }
+
+        .hero-reveal {
+            opacity: 0;
+            transform: translateY(22px);
+            animation: heroFadeUp 0.85s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+        }
+        @keyframes heroFadeUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes scrollLine {
+            0%, 100% { opacity: 0; transform: scaleY(0); transform-origin: top; }
+            50%       { opacity: 1; transform: scaleY(1); transform-origin: top; }
+        }
+
+        /* Responsive: grid de productos más compacto */
+        @media (max-width: 480px) {
+            #productos-grid { grid-template-columns: repeat(2, 1fr); gap: 0.75rem; }
+        }
+        /* Carrito: ancho completo en móvil chico */
+        @media (max-width: 400px) {
+            #modal-carrito > div { max-width: 100%; }
+        }
+        /* Modal detalles: bottom sheet solo en móvil */
+        @media (max-width: 767px) {
+            #modal-detalles { align-items: flex-end; padding: 0; }
+            #modal-detalles .modal-card {
+                border-radius: 1.5rem 1.5rem 0 0;
+                max-height: 96vh;
+                animation: slideUp 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+            }
+            #modal-detalles #detalle-contenido {
+                flex-direction: column;
+                max-height: 96vh;
+                overflow: hidden;
+            }
+        }
+        /* Desktop: centrado, ancho fijo, altura automática */
+        @media (min-width: 768px) {
+            #modal-detalles .modal-card {
+                min-height: 480px;
+                max-height: 88vh;
+            }
+            #modal-detalles #detalle-contenido {
+                flex-direction: row;
+                height: 600px;
+                max-height: 88vh;
+            }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
+        }
+        /* Handle pill solo en móvil */
+        @media (max-width: 767px) {
+            #modal-detalles .modal-card::before {
+                content: '';
+                display: block;
+                position: absolute;
+                top: 10px;
+                left: 50%;
+                transform: translateX(-50%);
+                width: 36px;
+                height: 4px;
+                background: rgba(255,255,255,0.15);
+                border-radius: 99px;
+                z-index: 60;
+            }
+        }
+        /* Toast compacto en móvil */
+        @media (max-width: 640px) {
+            #toast { 
+                font-size: 11px; 
+                padding: 0.6rem 1.2rem; 
+                white-space: nowrap;
+                max-width: 90vw;
+            }
+        }
+    </style>
+
+    <script>
+        // Parallax — solo desktop
+        const heroImg = document.getElementById('hero-img');
+        if (window.innerWidth > 640 && heroImg) {
+            window.addEventListener('scroll', () => {
+                const s = window.scrollY;
+                if (s < window.innerHeight * 1.5)
+                    heroImg.style.transform = `translateY(${s * 0.28}px)`;
+            }, { passive: true });
+        }
+    </script>
+
+    <section class="pt-10 pb-8 border-b border-white/5">
+        <div class="container mx-auto px-4">
+
+            <!-- Fila 1: Categorías con flechas -->
+            <div class="relative flex items-center w-full" id="cat-wrapper">
+                <!-- Flecha izquierda -->
+                <button id="cat-prev" onclick="scrollCats(-1)" aria-label="Anterior"
+                    class="hidden md:flex absolute left-0 z-10 w-8 h-8 items-center justify-center rounded-full bg-[#0a0a0a] border border-white/10 text-gray-400 hover:border-[#d4af37] hover:text-[#d4af37] transition-all flex-shrink-0 opacity-0 pointer-events-none"
+                    style="box-shadow:10px 0 20px 8px #050505;">
+                    <i class="fa-solid fa-chevron-left text-[10px]"></i>
+                </button>
+                <!-- Scroll container -->
+                <div class="flex items-center gap-3 overflow-x-auto no-scrollbar w-full pb-2 md:pb-0 md:px-10 md:justify-center" id="categorias-container">
+                    <button onclick="filtrarCategoria('Todos')" class="cat-btn active px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 bg-white/5 hover:border-[#d4af37] transition-all whitespace-nowrap">Todos</button>
+                    <button onclick="filtrarCategoria('Relojes')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Relojes</button>
+                    <button onclick="filtrarCategoria('Pulseras')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Pulseras</button>
+                    <button onclick="filtrarCategoria('Cadenas')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Cadenas</button>
+                    <button onclick="filtrarCategoria('Llaveros')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Llaveros</button>
+                    <button onclick="filtrarCategoria('Perfumes')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Perfumes</button>
+                    <button onclick="filtrarCategoria('Aros')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Aros</button>
+                    <button onclick="filtrarCategoria('Billeteras')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-white/10 hover:border-[#d4af37] transition-all whitespace-nowrap">Billeteras</button>
+                    <button onclick="filtrarCategoria('Ofertas')" class="cat-btn px-5 py-2 rounded-full text-xs font-bold uppercase tracking-widest border border-[#d4af37]/40 text-[#d4af37] hover:bg-[#d4af37] hover:text-black transition-all whitespace-nowrap">🏷 Ofertas</button>
+                </div>
+                <!-- Flecha derecha -->
+                <button id="cat-next" onclick="scrollCats(1)" aria-label="Siguiente"
+                    class="hidden md:flex absolute right-0 z-10 w-8 h-8 items-center justify-center rounded-full bg-[#0a0a0a] border border-white/10 text-gray-400 hover:border-[#d4af37] hover:text-[#d4af37] transition-all flex-shrink-0"
+                    style="box-shadow:-10px 0 20px 8px #050505;">
+                    <i class="fa-solid fa-chevron-right text-[10px]"></i>
+                </button>
+            </div>
+
+            <!-- Fila 2: Buscador premium centrado -->
+            <div class="mt-6 flex justify-center">
+                <div id="buscador-wrap" class="relative w-full max-w-lg group">
+                    <!-- Icono lupa -->
+                    <div class="absolute left-5 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#d4af37] transition-colors duration-300 pointer-events-none">
+                        <i class="fa-solid fa-magnifying-glass text-sm"></i>
+                    </div>
+                    <input
+                        type="text"
+                        id="buscador-principal"
+                        placeholder="Buscar pieza..."
+                        autocomplete="off"
+                        class="w-full bg-white/[0.03] border border-white/10 rounded-2xl py-3.5 pl-12 pr-12 text-sm text-white placeholder-gray-600 outline-none
+                               transition-all duration-300
+                               focus:bg-white/[0.05] focus:border-[#d4af37]/60 focus:shadow-[0_0_0_3px_rgba(212,175,55,0.08),0_8px_32px_rgba(0,0,0,0.4)]"
+                    >
+                    <!-- Botón limpiar -->
+                    <button id="buscador-clear"
+                        onclick="document.getElementById('buscador-principal').value='';document.getElementById('buscador-principal').dispatchEvent(new Event('input'));this.classList.add('opacity-0','pointer-events-none');"
+                        class="absolute right-4 top-1/2 -translate-y-1/2 w-6 h-6 flex items-center justify-center rounded-full bg-white/8 text-gray-500 hover:text-white hover:bg-white/15 transition-all opacity-0 pointer-events-none text-xs">
+                        <i class="fa-solid fa-xmark"></i>
+                    </button>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <script>
+        (function() {
+            const rail  = document.getElementById('categorias-container');
+            const prev  = document.getElementById('cat-prev');
+            const next  = document.getElementById('cat-next');
+            const STEP  = 180;
+
+            function updateArrows() {
+                if (window.innerWidth < 768) return;
+                const atStart = rail.scrollLeft <= 4;
+                const atEnd   = rail.scrollLeft + rail.clientWidth >= rail.scrollWidth - 4;
+                prev.classList.toggle('opacity-0',           atStart);
+                prev.classList.toggle('pointer-events-none', atStart);
+                next.classList.toggle('opacity-0',           atEnd);
+                next.classList.toggle('pointer-events-none', atEnd);
+            }
+
+            window.scrollCats = function(dir) {
+                rail.scrollBy({ left: dir * STEP, behavior: 'smooth' });
+            };
+
+            rail.addEventListener('scroll', updateArrows, { passive: true });
+            window.addEventListener('resize', updateArrows);
+            setTimeout(updateArrows, 100);
+
+            // Mostrar/ocultar botón X del buscador
+            const input  = document.getElementById('buscador-principal');
+            const clearBtn = document.getElementById('buscador-clear');
+            input.addEventListener('input', () => {
+                const hasText = input.value.length > 0;
+                clearBtn.classList.toggle('opacity-0',           !hasText);
+                clearBtn.classList.toggle('pointer-events-none', !hasText);
+            });
+        })();
+    </script>
+
+    <main id="productos" class="container mx-auto px-4 py-20">
+        <div class="flex flex-col mb-16">
+            <span class="text-[#d4af37] font-bold tracking-[0.4em] uppercase text-xs mb-2">Exclusividad</span>
+            <h2 class="text-4xl md:text-5xl font-luxury font-semibold tracking-wide">Productos disponibles</h2>
+        </div>
+
+        <div id="productos-grid" class="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-5 md:gap-8">
+            </div>
+    </main>
+
+   <footer class="bg-[#0a0a0a] border-t border-white/5 pt-16 pb-8">
+    <div class="container mx-auto px-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-12 mb-12 text-center md:text-left">
+            
+            <div class="flex flex-col items-center md:items-start">
+                <h3 class="text-2xl gold-gradient-text mb-4" style="font-family: 'Cinzel', serif; font-weight: 700;">
+                    CARLO ESSENTIAL
+                </h3>
+                <p class="text-gray-500 text-sm leading-relaxed max-w-xs">
+                    Elevando tu estilo con piezas exclusivas y elegancia atemporal. La esencia de la sofisticación en cada detalle.
+                </p>
+            </div>
+
+            <div class="flex flex-col items-center md:items-start">
+                <h4 class="text-white text-sm uppercase tracking-widest mb-6 font-bold">Navegación</h4>
+                <ul class="space-y-3">
+                    <li><a href="#" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Inicio</a></li>
+                    <li><a href="#" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Colecciones</a></li>
+                </ul>
+            </div>
+
+            <div class="flex flex-col items-center md:items-start">
+                <h4 class="text-white text-sm uppercase tracking-widest mb-6 font-bold">Contacto</h4>
+                <div class="flex gap-6 mb-6 text-xl">
+                    <a href="https://www.instagram.com/carlo.essential/" target="_blank" class="text-gray-500 hover:text-[#d4af37] transition-colors">
+                        <i class="fa-brands fa-instagram"></i>
+                    </a>
+                    <a href="https://wa.me/+5493624895445" target="_blank" class="text-gray-500 hover:text-[#d4af37] transition-colors">
+                        <i class="fa-brands fa-whatsapp"></i>
+                    </a>
+                </div>
+                <p class="text-gray-500 text-sm">Villa Ángela,Chaco, Argentina</p>
+              
+            </div>
+        </div>
+
+        <div class="border-t border-white/5 pt-8 flex flex-col md:flex-row justify-between items-center gap-4">
+            <p class="text-gray-600 text-[10px] tracking-widest uppercase text-center">
+                © 2026 Carlo Essential - Todos los derechos reservados
+            </p>
+            
+           <p class="text-gray-600 text-[10px] tracking-widest uppercase">
+                Diseñado y desarrollado por 
+                <a href="https://hostara.vercel.app" 
+                   target="_blank" 
+                   rel="noopener noreferrer" 
+                   class="text-gray-400 hover:text-[#d4af37] transition-colors font-bold underline underline-offset-4 decoration-white/10 hover:decoration-[#d4af37]">
+                   Hostara
+                </a>
+            </p>
+        </div>
+    </div>
+</footer>
+
+    <div id="modal-detalles" class="fixed inset-0 bg-black/90 hidden z-[110] flex items-end md:items-center justify-center md:p-6 backdrop-blur-xl">
+        <div class="modal-card w-full md:max-w-5xl md:rounded-3xl overflow-hidden shadow-2xl relative"
+             style="max-height: 96vh;">
+            <div id="detalle-contenido" class="flex flex-col md:flex-row w-full" style="max-height: 96vh;"></div>
+        </div>
+    </div>
+
+    <div id="modal-carrito" class="fixed inset-0 bg-black/60 hidden z-[110] flex justify-end backdrop-blur-sm">
+        <div class="w-full sm:max-w-md bg-[#0a0a0a] h-full shadow-2xl flex flex-col border-l border-white/10 animate-[slideIn_0.3s_ease-out]">
+            <div class="p-8 border-b border-white/5 flex justify-between items-center">
+                <h2 class="text-2xl font-luxury font-semibold tracking-wide">Tu carrito</h2>
+                <div class="flex items-center gap-3">
+                    <button id="btn-vaciar" onclick="vaciarCarrito()" class="hidden text-[9px] font-black uppercase tracking-widest text-red-500/70 hover:text-red-400 border border-red-500/20 hover:border-red-400/40 px-3 py-1.5 rounded-full transition-all">
+                        <i class="fa-solid fa-trash-can mr-1 text-[8px]"></i> Vaciar
+                    </button>
+                    <button onclick="cerrarModal('modal-carrito')" class="text-gray-500 hover:text-white"><i class="fa-solid fa-xmark text-xl"></i></button>
+                </div>
+            </div>
+            <div id="carrito-lista" class="flex-1 overflow-y-auto p-6 space-y-6"></div>
+            <div class="p-8 border-t border-white/5">
+                <div class="flex justify-between items-center mb-8">
+                    <span class="text-gray-400 uppercase tracking-widest text-xs">Total</span>
+                    <span id="total-carrito" class="text-2xl font-light tracking-widest text-white/90">$0</span>
+                </div>
+                <button id="btn-enviar-pedido" onclick="abrirFormularioPedido()" class="w-full bg-[#d4af37] text-black py-4 rounded-full font-black uppercase tracking-widest hover:bg-white transition-all">
+                    Finalizar pedido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMAR ELIMINAR -->
+    <div id="modal-confirmar" class="fixed inset-0 z-[200] hidden flex items-center justify-center px-5" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);">
+        <div class="w-full max-w-sm bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-[fadeInScale_0.25s_ease-out]">
+            <!-- Imagen del producto -->
+            <div class="relative h-40 bg-[#050505] overflow-hidden">
+                <img id="confirm-img" src="" class="w-full h-full object-cover opacity-40">
+                <div class="absolute inset-0 flex items-center justify-center">
+                    <div class="w-14 h-14 rounded-full bg-red-500/15 border border-red-500/30 flex items-center justify-center">
+                        <i class="fa-solid fa-trash-can text-red-400 text-xl"></i>
+                    </div>
+                </div>
+            </div>
+            <!-- Texto -->
+            <div class="p-7 text-center">
+                <h3 class="font-luxury font-semibold text-white text-xl mb-2 tracking-wide">¿Eliminar pieza?</h3>
+                <p class="text-gray-500 text-xs mb-1 uppercase tracking-widest">Vas a quitar del carrito</p>
+                <p id="confirm-nombre" class="text-white/80 font-light text-sm mb-7 truncate"></p>
+                <div class="flex gap-3">
+                    <button onclick="cancelarEliminar()" class="flex-1 py-3 rounded-full border border-white/10 text-white/60 text-xs font-bold uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmarEliminar()" class="flex-1 py-3 rounded-full bg-red-500/90 text-white text-xs font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg">
+                        Eliminar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL CONFIRMAR VACIAR CARRITO -->
+    <div id="modal-vaciar" class="fixed inset-0 z-[200] hidden flex items-center justify-center px-5" style="background: rgba(0,0,0,0.75); backdrop-filter: blur(8px);">
+        <div class="w-full max-w-sm bg-[#111] border border-white/10 rounded-3xl overflow-hidden shadow-2xl animate-[fadeInScale_0.25s_ease-out]">
+            <div class="p-8 text-center">
+                <div class="w-16 h-16 rounded-full bg-red-500/10 border border-red-500/25 flex items-center justify-center mx-auto mb-5">
+                    <i class="fa-solid fa-cart-xmark text-red-400 text-2xl"></i>
+                </div>
+                <h3 class="font-luxury font-semibold text-white text-2xl mb-2 tracking-wide">¿Vaciar carrito?</h3>
+                <p class="text-gray-500 text-xs uppercase tracking-widest mb-1">Se van a eliminar todos los productos</p>
+                <p class="text-gray-600 text-xs mb-8">Esta acción no se puede deshacer.</p>
+                <div class="flex gap-3">
+                    <button onclick="cancelarVaciar()" class="flex-1 py-3 rounded-full border border-white/10 text-white/60 text-xs font-bold uppercase tracking-widest hover:border-white/30 hover:text-white transition-all">
+                        Cancelar
+                    </button>
+                    <button onclick="confirmarVaciar()" class="flex-1 py-3 rounded-full bg-red-500/90 text-white text-xs font-black uppercase tracking-widest hover:bg-red-500 transition-all shadow-lg">
+                        Vaciar todo
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="lightbox" class="fixed inset-0 z-[500] hidden flex items-center justify-center" style="background: rgba(0,0,0,0.95); backdrop-filter: blur(12px);">
+        <!-- Cerrar -->
+        <button onclick="cerrarLightbox()" class="absolute top-5 right-5 w-10 h-10 flex items-center justify-center bg-white/10 rounded-full text-white/70 hover:text-white hover:bg-white/20 transition-all z-10">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <!-- Contador -->
+        <span id="lb-counter" class="absolute top-5 left-1/2 -translate-x-1/2 text-white/40 text-xs uppercase tracking-widest"></span>
+        <!-- Imagen principal -->
+        <div class="relative flex items-center justify-center w-full h-full px-16 py-16">
+            <img id="lb-img" src="" class="max-w-full max-h-full object-contain rounded-2xl shadow-2xl select-none" style="max-height: 80vh;">
+        </div>
+        <!-- Flechas nav -->
+        <button onclick="lightboxNav(-1)" class="absolute left-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center bg-white/10 rounded-full text-white/70 hover:text-white hover:bg-white/20 transition-all" id="lb-prev">
+            <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        <button onclick="lightboxNav(1)" class="absolute right-4 top-1/2 -translate-y-1/2 w-11 h-11 flex items-center justify-center bg-white/10 rounded-full text-white/70 hover:text-white hover:bg-white/20 transition-all" id="lb-next">
+            <i class="fa-solid fa-chevron-right"></i>
+        </button>
+        <!-- Miniaturas -->
+        <div id="lb-thumbs" class="absolute bottom-5 left-1/2 -translate-x-1/2 flex gap-2"></div>
+    </div>
+
+    <!-- SCROLL TO TOP -->
+    <button id="scroll-top-btn"
+        onclick="window.scrollTo({top:0,behavior:'smooth'})"
+        class="fixed bottom-8 right-6 z-[90] w-11 h-11 flex items-center justify-center
+               bg-[#d4af37] text-black rounded-full shadow-lg opacity-0 pointer-events-none
+               transition-all duration-300 hover:bg-white hover:scale-110"
+        title="Volver arriba">
+        <i class="fa-solid fa-chevron-up text-sm"></i>
+    </button>
+    <script>
+        (function() {
+            const btn = document.getElementById('scroll-top-btn');
+            window.addEventListener('scroll', () => {
+                const show = window.scrollY > 400;
+                btn.classList.toggle('opacity-0', !show);
+                btn.classList.toggle('pointer-events-none', !show);
+                btn.classList.toggle('opacity-100', show);
+            }, { passive: true });
+        })();
+    </script>
+
+    <div id="toast" class="fixed bottom-10 left-1/2 -translate-x-1/2 translate-y-32 glass text-white px-8 py-4 rounded-full shadow-2xl z-[300] font-bold text-sm border border-[#d4af37]/30 transition-all duration-500"></div>
+
+    <!-- LOADER DEEP LINK (solo para links ?p=ID desde WhatsApp) -->
+    <div id="deeplink-loader" class="fixed inset-0 z-[400] flex-col items-center justify-center hidden"
+         style="background: rgba(5,5,5,0.97); backdrop-filter: blur(16px);">
+        <div class="flex flex-col items-center gap-6">
+            <div class="relative w-16 h-16">
+                <div class="absolute inset-0 rounded-full border-2 border-[#d4af37]/15"></div>
+                <div class="absolute inset-0 rounded-full border-2 border-transparent border-t-[#d4af37] animate-spin"></div>
+                <div class="absolute inset-2 rounded-full border border-[#d4af37]/20"></div>
+            </div>
+            <div class="text-center">
+                <p class="text-[#d4af37] text-[9px] font-black uppercase tracking-[0.5em] mb-1">Carlo Essential</p>
+                <p class="text-gray-600 text-[9px] uppercase tracking-widest">Cargando producto...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL FORMULARIO PEDIDO -->
+    <div id="modal-pedido" class="fixed inset-0 z-[210] hidden flex items-end sm:items-center justify-center px-0 sm:px-5" style="background: rgba(0,0,0,0.80); backdrop-filter: blur(10px);">
+        <div class="w-full sm:max-w-sm bg-[#0f0f0f] border border-white/8 rounded-t-3xl sm:rounded-3xl overflow-hidden shadow-2xl animate-[fadeInScale_0.25s_ease-out]">
+            <div class="h-px w-full" style="background: linear-gradient(90deg, transparent, #d4af37, transparent);"></div>
+            <div class="px-7 pt-6 pb-4 flex items-center justify-between">
+                <div>
+                    <h3 class="font-luxury text-xl text-white tracking-wide">Completar pedido</h3>
+                    <p class="text-[9px] uppercase tracking-[0.3em] text-gray-500 mt-0.5">Tus datos de contacto</p>
+                </div>
+                <button onclick="cerrarFormularioPedido()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-500 hover:text-white hover:bg-white/10 transition-all text-lg leading-none">&times;</button>
+            </div>
+            <div class="px-7 pb-3 space-y-4">
+                <div>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Nombre completo</label>
+                    <input id="pedido-nombre" type="text" placeholder="Ej: Juan García" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Teléfono o Instagram</label>
+                    <input id="pedido-contacto" type="text" placeholder="Ej: 3624123456 o @usuario" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Medio de pago preferido</label>
+                    <select id="pedido-pago" class="w-full bg-[#111] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all appearance-none cursor-pointer">
+                        <option value="" disabled selected>Seleccioná una opción</option>
+                        <option value="Efectivo">Efectivo</option>
+                        <option value="Transferencia">Transferencia</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">¿Necesitás envío?</label>
+                    <select id="pedido-envio" class="w-full bg-[#111] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all appearance-none cursor-pointer">
+                        <option value="" disabled selected>Seleccioná una opción</option>
+                        <option value="Si">Sí, con envío</option>
+                        <option value="No">No, retiro en tienda</option>
+                    </select>
+                </div>
+            </div>
+            <div class="px-7 py-5">
+                <button id="btn-confirmar-pedido" onclick="confirmarPedido()" class="w-full bg-[#d4af37] text-black py-4 rounded-full font-black uppercase tracking-widest text-xs hover:bg-white transition-all">
+                    <span class="btn-confirmar-text">Enviar pedido</span>
+                    <div class="btn-confirmar-spinner hidden w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mx-auto"></div>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL PEDIDO ENVIADO OK -->
+    <div id="modal-pedido-ok" class="fixed inset-0 z-[220] hidden flex items-center justify-center px-5" style="background: rgba(0,0,0,0.85); backdrop-filter: blur(12px);">
+        <div class="w-full max-w-xs bg-[#0f0f0f] border border-white/8 rounded-3xl overflow-hidden shadow-2xl animate-[fadeInScale_0.25s_ease-out] text-center">
+            <div class="h-px w-full" style="background: linear-gradient(90deg, transparent, #d4af37, transparent);"></div>
+            <div class="px-8 py-10">
+                <div class="w-16 h-16 rounded-full bg-[#d4af37]/10 border border-[#d4af37]/30 flex items-center justify-center mx-auto mb-5">
+                    <i class="fa-solid fa-check text-[#d4af37] text-2xl"></i>
+                </div>
+                <h3 class="font-luxury text-2xl text-white mb-3 tracking-wide">Pedido enviado</h3>
+                <p class="text-gray-400 text-sm leading-relaxed">Tu pedido fue registrado con éxito.<br>El dueño de la tienda se va a <span class="text-[#d4af37]">contactar pronto</span> con vos para coordinar el pago y el envío.</p>
+                <button onclick="cerrarPedidoOk()" class="mt-8 w-full border border-white/10 text-white/60 py-3 rounded-full font-bold uppercase text-[9px] tracking-widest hover:border-white/30 hover:text-white transition-all">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
