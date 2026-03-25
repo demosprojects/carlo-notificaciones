@@ -5,6 +5,9 @@ import {
 import { 
     getAuth, onAuthStateChanged, signOut 
 } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+import {
+    getMessaging, getToken, onMessage
+} from "https://www.gstatic.com/firebasejs/10.7.1/firebase-messaging.js";
 
 const firebaseConfig = {
     apiKey: "AIzaSyCZSkqpGlv-gzeBH10VfJ1cpEavjUV0MAM",
@@ -18,6 +21,11 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const auth = getAuth(app);
+const messaging = getMessaging(app);
+
+// ⚠️ REEMPLAZÁ ESTE VALOR con tu clave VAPID real de Firebase Console
+// Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Generate key pair
+const VAPID_KEY = "BPW4FiIUjrDAz1XLRrYrCZQJWxQ-DCLg4V2AtfB-L1rq0b0hn7PVf0xirecKtZjHZMPhizWmA6mZBbY3fDJvpdQ";
 
 let productos = [];
 let productosFiltrados = [];
@@ -29,7 +37,7 @@ onAuthStateChanged(auth, (user) => {
     } else {
         cargarProductos();
         escucharPedidosEnTiempoReal();
-        solicitarPermisoNotificaciones();
+        solicitarPermisoNotificaciones().then(() => activarFCM());
     }
 });
 
@@ -363,20 +371,31 @@ window.mostrarSeccion = function(seccion) {
     }
 };
 
-// Set de IDs ya conocidos — se llena en la primera carga sin notificar
-let pedidosConocidos = null; // null = primera carga aún no procesada
+// ============================================
+// ESCUCHA DE PEDIDOS EN TIEMPO REAL (MEJORADO)
+// ============================================
+
+// null = primera carga aún no procesada
+let pedidosConocidos = null;
+let _snapshotUnsub = null;
 
 function escucharPedidosEnTiempoReal() {
+    // Evitar listeners duplicados si se llama más de una vez
+    if (_snapshotUnsub) {
+        _snapshotUnsub();
+        _snapshotUnsub = null;
+    }
+
     const q = query(collection(db, "orders"), orderBy("fecha", "desc"));
-    
-    onSnapshot(q, (snap) => {
+
+    _snapshotUnsub = onSnapshot(q, (snap) => {
         const pedidosNuevos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         if (pedidosConocidos === null) {
             // Primera carga: registrar todos los IDs existentes sin notificar
             pedidosConocidos = new Set(pedidosNuevos.map(p => p.id));
         } else {
-            // Cargas siguientes: detectar IDs que no estaban antes
+            // Cargas siguientes: detectar IDs nuevos
             pedidosNuevos.forEach(p => {
                 if (!pedidosConocidos.has(p.id)) {
                     pedidosConocidos.add(p.id);
@@ -388,21 +407,23 @@ function escucharPedidosEnTiempoReal() {
         todosLosPedidos = pedidosNuevos;
         filtrarPedidos();
         actualizarBadgePedidos();
-        
+
         const loader = document.getElementById('pedidos-loader');
         const grid   = document.getElementById('pedidos-grid');
         if (loader) loader.classList.add('hidden');
         if (grid)   grid.classList.remove('hidden');
     }, (error) => {
-        console.error("Error en tiempo real:", error);
+        console.error("[Admin] Error en onSnapshot:", error);
+        // Reconectar automáticamente después de 5 segundos
+        _snapshotUnsub = null;
+        setTimeout(escucharPedidosEnTiempoReal, 5000);
     });
 }
 
 // ─── NOTIFICACIONES ──────────────────────────────────────────────────────────
+
 async function solicitarPermisoNotificaciones() {
     if (!("Notification" in window) || !navigator.serviceWorker) return;
-
-    // Si ya fue denegado, no molestamos más
     if (Notification.permission === "denied") return;
 
     if (Notification.permission !== "granted") {
@@ -413,8 +434,8 @@ async function solicitarPermisoNotificaciones() {
     console.log("[Admin] Notificaciones activadas ✓");
 }
 
+// Notificación vía Service Worker (app abierta o en background del navegador)
 async function notificarNuevoPedido(pedido) {
-    // Verificar que tenemos permiso
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
@@ -422,18 +443,80 @@ async function notificarNuevoPedido(pedido) {
     try {
         const reg = await navigator.serviceWorker.ready;
 
-        // Mandar el pedido al SW para que muestre la notificación nativa
-        // (funciona incluso con la pantalla apagada / app en background)
-        reg.active?.postMessage({
+        const mensaje = {
             type: "NUEVO_PEDIDO",
-            pedidoId: pedido.id,
-            nombre:   pedido.nombre || "Cliente",
-            total:    pedido.total   || 0,
-            cantItems: (pedido.items || []).length
-        });
+            pedidoId:  pedido.id,
+            nombre:    pedido.nombre   || "Cliente",
+            total:     pedido.total    || 0,
+            cantItems: (pedido.items   || []).length
+        };
+
+        if (reg.active) {
+            // SW activo: enviar directo
+            reg.active.postMessage(mensaje);
+        } else {
+            // SW en transición: esperar a que se active
+            const worker = reg.waiting || reg.installing;
+            if (!worker) return;
+            worker.addEventListener('statechange', function handler() {
+                if (this.state === 'activated') {
+                    reg.active?.postMessage(mensaje);
+                    this.removeEventListener('statechange', handler);
+                }
+            });
+        }
     } catch(e) {
-        console.warn("[Admin] No se pudo notificar:", e);
+        console.warn("[Admin] No se pudo notificar via SW:", e);
     }
+}
+
+// ─── FCM: NOTIFICACIONES CON APP CERRADA ─────────────────────────────────────
+// Permite recibir notificaciones incluso cuando el celular está bloqueado
+// y la app web está completamente cerrada.
+// Requiere: reemplazar VAPID_KEY arriba con tu clave real de Firebase Console.
+
+async function activarFCM() {
+    if (!("Notification" in window)) return;
+    if (Notification.permission !== "granted") return;
+    if (!navigator.serviceWorker) return;
+    if (!VAPID_KEY || VAPID_KEY === "TU_CLAVE_VAPID_PUBLICA_AQUI") {
+        console.warn("[FCM] VAPID_KEY no configurada. Las notificaciones con app cerrada no funcionarán.");
+        return;
+    }
+
+    try {
+        const swReg = await navigator.serviceWorker.ready;
+        const token = await getToken(messaging, {
+            vapidKey: VAPID_KEY,
+            serviceWorkerRegistration: swReg
+        });
+
+        if (token) {
+            console.log("[FCM] Token obtenido:", token);
+            // Guardar el token en Firestore asociado al usuario admin
+            const uid = auth.currentUser?.uid;
+            if (uid) {
+                await updateDoc(doc(db, "admins", uid), { fcmToken: token }).catch(() => {
+                    // Si el doc no existe, crearlo
+                    import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js")
+                        .then(({ setDoc }) => setDoc(doc(db, "admins", uid), { fcmToken: token }, { merge: true }));
+                });
+            }
+        }
+    } catch(e) {
+        console.warn("[FCM] Error al activar FCM:", e);
+    }
+
+    // Manejar notificaciones FCM cuando la app está en primer plano
+    onMessage(messaging, (payload) => {
+        console.log("[FCM] Mensaje en foreground:", payload);
+        // La notificación background la maneja el SW automáticamente.
+        // Cuando la app está abierta, podemos mostrar nuestro propio toast.
+        const data = payload.data || {};
+        if (data.nombre) {
+            mostrarToast(`🛍️ Nuevo pedido de ${data.nombre}`, 'info', 6000);
+        }
+    });
 }
 
 // Cuando el usuario hace clic en la notificación y el SW nos avisa
@@ -442,9 +525,7 @@ if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener("message", (event) => {
         const { type, pedidoId } = event.data || {};
         if (type === "ABRIR_PEDIDO" && pedidoId) {
-            // Cambiar a la sección de pedidos y abrir el detalle
             mostrarSeccion("pedidos");
-            // Pequeño delay para que renderice la lista primero
             setTimeout(() => {
                 if (window.verDetallePedido) window.verDetallePedido(pedidoId);
             }, 400);
@@ -468,7 +549,6 @@ let filtroEstadoActual = '';
 
 window.setFiltroEstado = function(estado) {
     filtroEstadoActual = estado;
-    // Actualizar chips activos
     ['todos','pendiente','contactado','cancelado'].forEach(k => {
         const chip = document.getElementById(`chip-${k}`);
         if (!chip) return;
@@ -490,7 +570,6 @@ window.filtrarPedidos = function() {
         return matchEstado && matchBusqueda;
     });
 
-    // Actualizar contadores en chips
     const cuentas = { pendiente: 0, contactado: 0, cancelado: 0, archivo: 0 };
     todosLosPedidos.forEach(p => {
         if (p.estado === 'completado') cuentas.archivo++;
@@ -526,43 +605,32 @@ function renderPedidos() {
     grid.innerHTML = pedidosFiltrados.map(p => {
         const fecha   = new Date(p.fecha).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
         const estadoClass = `estado-${p.estado || 'pendiente'}`;
-        const estadoLabel = { pendiente:'Pendiente', contactado:'Contactado', completado:'Completado', cancelado:'Cancelado' }[p.estado] || 'Pendiente';
+        const estadoLabel = ESTADOS.find(e => e.key === p.estado)?.label || 'Pendiente';
         const itemsResumen = (p.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(' · ');
 
-        const envioChip = p.envio === 'Si'
-            ? '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;background:rgba(212,175,55,0.1);border:1px solid rgba(212,175,55,0.25);color:#d4af37;font-size:9px;font-weight:800;letter-spacing:0.08em;"><i class=\"fa-solid fa-truck\" style=\"font-size:7px;\"></i> Envio</span>'
-            : p.envio === 'No'
-            ? '<span style="display:inline-flex;align-items:center;gap:3px;padding:2px 8px;border-radius:99px;background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.08);color:#6b7280;font-size:9px;font-weight:800;letter-spacing:0.08em;"><i class=\"fa-solid fa-store\" style=\"font-size:7px;\"></i> Retira</span>'
-            : '';
         return `
-        <div class="pedido-card bg-[#0a0a0a] border border-white/5 rounded-2xl p-4 sm:p-5 cursor-pointer active:opacity-80" onclick="verDetallePedido('${p.id}')">
-            <div class="flex items-start justify-between gap-3">
+        <div onclick="verDetallePedido('${p.id}')" class="pedido-card cursor-pointer bg-[#0a0a0a] rounded-2xl p-4 border border-white/5 hover:border-[#d4af37]/40 transition-all active:scale-[0.98]">
+            <div class="flex items-start justify-between gap-2 mb-3">
                 <div class="flex-1 min-w-0">
-                    <div class="flex items-center gap-2 mb-1.5 flex-wrap">
-                        <h3 class="font-luxury text-base sm:text-lg text-white leading-tight">${p.nombre}</h3>
-                        <span class="estado-badge ${estadoClass}">${estadoLabel}</span>
-                        ${envioChip}
-                    </div>
-                    <div class="flex flex-wrap gap-x-3 gap-y-0.5 mb-1.5">
-                        <p class="text-[11px] text-gray-500"><i class="fa-solid fa-phone mr-1"></i>${p.contacto}</p>
-                        <p class="text-[11px] text-gray-500"><i class="fa-solid fa-credit-card mr-1"></i>${p.medioPago}</p>
-                    </div>
-                    <p class="text-[10px] text-gray-600 truncate">${itemsResumen}</p>
+                    <p class="text-white font-bold text-sm truncate">${p.nombre}</p>
+                    <p class="text-gray-500 text-[10px] mt-0.5">${fecha}</p>
                 </div>
-                <div class="text-right flex-shrink-0 pl-1">
-                    <p class="text-[#d4af37] font-bold text-base sm:text-lg">$${Number(p.total).toLocaleString('es-AR')}</p>
-                    <p class="text-[9px] text-gray-600 mt-1 whitespace-nowrap">${fecha}</p>
-                </div>
+                <span class="estado-badge ${estadoClass} flex-shrink-0">${estadoLabel}</span>
+            </div>
+            <p class="text-gray-600 text-[9px] truncate mb-3">${itemsResumen}</p>
+            <div class="flex items-center justify-between">
+                <p class="text-[#d4af37] font-bold text-base">$${Number(p.total).toLocaleString('es-AR')}</p>
+                <p class="text-gray-600 text-[9px]">${(p.items || []).length} pieza${(p.items || []).length !== 1 ? 's' : ''}</p>
             </div>
         </div>`;
     }).join('');
 }
 
 const ESTADOS = [
-    { key: 'pendiente',  label: 'Pendiente',  cls: 'estado-pendiente' },
-    { key: 'contactado', label: 'Contactado', cls: 'estado-contactado' },
-    { key: 'completado', label: 'Completado ✓', cls: 'estado-completado' },
-    { key: 'cancelado',  label: 'Cancelado',  cls: 'estado-cancelado'  },
+    { key: 'pendiente',   label: 'Pendiente',   cls: 'estado-pendiente' },
+    { key: 'contactado',  label: 'Contactado',  cls: 'estado-contactado' },
+    { key: 'completado',  label: 'Completado',  cls: 'estado-completado' },
+    { key: 'cancelado',   label: 'Cancelado',   cls: 'estado-cancelado' },
 ];
 
 window.verDetallePedido = function(id) {
@@ -618,9 +686,9 @@ window.verDetallePedido = function(id) {
                 <p class="text-white text-sm">${p.medioPago}</p>
             </div>
             <div class="bg-white/3 rounded-xl p-3 border border-white/5">
-                <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Env\u00edo</p>
+                <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Envío</p>
                 <p class="text-sm font-bold ${p.envio === 'Si' ? 'text-[#d4af37]' : 'text-gray-400'}">
-                    ${p.envio === 'Si' ? '\u{1F69A} Con env\u00edo' : p.envio === 'No' ? '\u{1F3EA} Retira' : '\u2014'}
+                    ${p.envio === 'Si' ? '🚚 Con envío' : p.envio === 'No' ? '🏪 Retira' : '—'}
                 </p>
             </div>
         </div>
@@ -790,7 +858,7 @@ window.imprimirTicket = function(id) {
                 window.print();
                 setTimeout(() => window.close(), 500);
             }
-        </script>
+        <\/script>
     </body>
     </html>
     `;
@@ -798,13 +866,14 @@ window.imprimirTicket = function(id) {
     win.document.write(ticketHTML);
     win.document.close();
 };
+
 // Inicializar navegación: marcar inventario como activo al cargar
 document.addEventListener('DOMContentLoaded', () => {
     mostrarSeccion('inventario');
-    // Chip "Todos" activo por defecto
     const chipTodos = document.getElementById('chip-todos');
     if (chipTodos) chipTodos.classList.add('activo');
 });
+
 // ============================================
 // ARCHIVO DE PEDIDOS COMPLETADOS
 // ============================================
@@ -872,7 +941,6 @@ window.eliminarDelArchivo = function(id, btnEl) {
             await deleteDoc(doc(db, 'orders', id));
             cerrarConfirmAccion();
             mostrarToast('Pedido eliminado del archivo', 'error');
-            // Animar y quitar card del DOM
             const card = btnEl?.closest('div[style*="background:#0f0f0f"]');
             if (card) {
                 card.style.transition = 'opacity 0.3s, transform 0.3s';
