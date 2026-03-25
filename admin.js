@@ -963,3 +963,50 @@ window.eliminarDelArchivo = function(id, btnEl) {
         }
     });
 };
+// ============================================
+// WAKE LOCK + RECONEXIÓN EN BACKGROUND
+// Mantiene la app activa con pantalla bloqueada
+// y reconecta Firebase si se cortó la conexión.
+// ============================================
+
+let _wakeLock = null;
+
+// Pedir Wake Lock para evitar que Android suspenda la pestaña
+async function activarWakeLock() {
+    if (!('wakeLock' in navigator)) {
+        console.warn('[WakeLock] No soportado en este navegador/dispositivo.');
+        return;
+    }
+    try {
+        _wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Activo ✓');
+        _wakeLock.addEventListener('release', () => {
+            console.log('[WakeLock] Liberado (pantalla apagada o sistema lo canceló)');
+        });
+    } catch (e) {
+        console.warn('[WakeLock] No se pudo activar:', e.message);
+    }
+}
+
+// Reactivar Wake Lock cuando la pantalla vuelve a estar visible
+// (el sistema lo libera al bloquear, hay que pedirlo de nuevo al desbloquear)
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+        console.log('[Visibility] App visible de nuevo — reconectando...');
+
+        // Reactivar Wake Lock
+        await activarWakeLock();
+
+        // Reconectar el listener de Firestore por si se cayó
+        escucharPedidosEnTiempoReal();
+    }
+});
+
+// Reconexión extra por si la red se corta y vuelve
+window.addEventListener('online', () => {
+    console.log('[Network] Conexión restaurada — reconectando Firestore...');
+    escucharPedidosEnTiempoReal();
+});
+
+// Arrancar Wake Lock al cargar la app
+activarWakeLock();
