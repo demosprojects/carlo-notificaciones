@@ -1,6 +1,6 @@
 // ─── CACHE ────────────────────────────────────────────────────────────────────
 // Cambia este número cada vez que subas cambios al código
-const CACHE_NAME = 'rv-admin-20250326';
+const CACHE_NAME = 'rv-admin-20250326b';
 
 const PRECACHE_URLS = [
     'login.html',
