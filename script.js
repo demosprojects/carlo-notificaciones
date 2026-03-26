@@ -820,9 +820,12 @@ window.confirmarPedido = async function() {
         return;
     }
 
-    let total = 0;
+    const COSTO_ENVIO = 2000;
+    const tieneEnvio = envio === "Si";
+
+    let subtotalProductos = 0;
     const items = carrito.map(p => {
-        total += p.precio * p.cantidad;
+        subtotalProductos += p.precio * p.cantidad;
         return {
             id:       p.id,
             nombre:   p.nombre,
@@ -832,6 +835,9 @@ window.confirmarPedido = async function() {
             subtotal: p.precio * p.cantidad
         };
     });
+
+    const costoEnvio = tieneEnvio ? COSTO_ENVIO : 0;
+    const total = subtotalProductos + costoEnvio;
 
     const btn    = document.getElementById("btn-confirmar-pedido");
     const txtEl  = btn.querySelector(".btn-confirmar-text");
@@ -847,6 +853,8 @@ window.confirmarPedido = async function() {
             contacto,
             medioPago: pago,
             envio,
+            costoEnvio,
+            subtotalProductos,
             items,
             total,
             estado: "pendiente",
