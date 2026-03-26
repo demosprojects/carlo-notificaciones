@@ -477,37 +477,6 @@ async function notificarNuevoPedido(pedido) {
         console.warn("[ntfy] Error al notificar:", e);
     }
 
-    // ─── 2. SW: notificación local cuando la app está abierta en el navegador ─
-    if (!("Notification" in window)) return;
-    if (Notification.permission !== "granted") return;
-    if (!navigator.serviceWorker) return;
-
-    try {
-        const reg = await navigator.serviceWorker.ready;
-
-        const mensaje = {
-            type:      "NUEVO_PEDIDO",
-            pedidoId:  pedido.id,
-            nombre,
-            total:     pedido.total || 0,
-            cantItems: (pedido.items || []).length
-        };
-
-        if (reg.active) {
-            reg.active.postMessage(mensaje);
-        } else {
-            const worker = reg.waiting || reg.installing;
-            if (!worker) return;
-            worker.addEventListener('statechange', function handler() {
-                if (this.state === 'activated') {
-                    reg.active?.postMessage(mensaje);
-                    this.removeEventListener('statechange', handler);
-                }
-            });
-        }
-    } catch(e) {
-        console.warn("[Admin] No se pudo notificar via SW:", e);
-    }
 }
 
 // ─── FCM: NOTIFICACIONES CON APP CERRADA ─────────────────────────────────────
