@@ -23,8 +23,7 @@ const db  = getFirestore(app);
 const auth = getAuth(app);
 const messaging = getMessaging(app);
 
-// ⚠️ REEMPLAZÁ ESTE VALOR con tu clave VAPID real de Firebase Console
-// Firebase Console → Project Settings → Cloud Messaging → Web Push certificates → Generate key pair
+
 const VAPID_KEY = "BPW4FiIUjrDAz1XLRrYrCZQJWxQ-DCLg4V2AtfB-L1rq0b0hn7PVf0xirecKtZjHZMPhizWmA6mZBbY3fDJvpdQ";
 
 let productos = [];
@@ -479,7 +478,7 @@ async function activarFCM() {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
-    if (!VAPID_KEY || VAPID_KEY === "TU_CLAVE_VAPID_PUBLICA_AQUI") {
+    if (!VAPID_KEY || VAPID_KEY === "BPW4FiIUjrDAz1XLRrYrCZQJWxQ-DCLg4V2AtfB-L1rq0b0hn7PVf0xirecKtZjHZMPhizWmA6mZBbY3fDJvpdQ") {
         console.warn("[FCM] VAPID_KEY no configurada. Las notificaciones con app cerrada no funcionarán.");
         return;
     }
