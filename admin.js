@@ -465,12 +465,12 @@ async function notificarNuevoPedido(pedido) {
         await fetch("https://ntfy.sh/Carlo_essential", {
             method: "POST",
             headers: {
-                "Title":        "Nuevo pedido en tienda",
+                "Title":        "Nuevo pedido en tu tienda",
                 "Priority":     "high",
                 "Tags":         "shopping,bell",
                 "Content-Type": "text/plain"
             },
-            body: `${nombre} - $${total} - ${itemsTxt}`
+            body: "Ingresa al admin para visualizarlo"
         });
         console.log("[ntfy] Notificación enviada ✓");
     } catch(e) {
