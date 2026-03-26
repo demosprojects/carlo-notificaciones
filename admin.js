@@ -433,8 +433,32 @@ async function solicitarPermisoNotificaciones() {
     console.log("[Admin] Notificaciones activadas ✓");
 }
 
-// Notificación vía Service Worker (app abierta o en background del navegador)
+// Notificación vía ntfy.sh (llega SIEMPRE, celular bloqueado o app cerrada)
+// + vía Service Worker cuando la app está abierta
 async function notificarNuevoPedido(pedido) {
+    const nombre    = pedido.nombre || "Cliente";
+    const total     = Number(pedido.total || 0).toLocaleString("es-AR");
+    const cantItems = (pedido.items || []).length;
+    const itemsTxt  = cantItems === 1 ? "1 producto" : `${cantItems} productos`;
+
+    // ─── 1. ntfy.sh: llega aunque el celu esté bloqueado ─────────────────────
+    try {
+        await fetch("https://ntfy.sh/Carlo_essential", {
+            method: "POST",
+            headers: {
+                "Title":        "🛍\uFE0F Nuevo pedido en tienda",
+                "Priority":     "high",
+                "Tags":         "shopping,bell",
+                "Content-Type": "text/plain"
+            },
+            body: `${nombre}  ·  $${total}  ·  ${itemsTxt}`
+        });
+        console.log("[ntfy] Notificación enviada ✓");
+    } catch(e) {
+        console.warn("[ntfy] Error al notificar:", e);
+    }
+
+    // ─── 2. SW: notificación local cuando la app está abierta en el navegador ─
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
@@ -443,18 +467,16 @@ async function notificarNuevoPedido(pedido) {
         const reg = await navigator.serviceWorker.ready;
 
         const mensaje = {
-            type: "NUEVO_PEDIDO",
+            type:      "NUEVO_PEDIDO",
             pedidoId:  pedido.id,
-            nombre:    pedido.nombre   || "Cliente",
-            total:     pedido.total    || 0,
-            cantItems: (pedido.items   || []).length
+            nombre,
+            total:     pedido.total || 0,
+            cantItems: (pedido.items || []).length
         };
 
         if (reg.active) {
-            // SW activo: enviar directo
             reg.active.postMessage(mensaje);
         } else {
-            // SW en transición: esperar a que se active
             const worker = reg.waiting || reg.installing;
             if (!worker) return;
             worker.addEventListener('statechange', function handler() {
@@ -478,7 +500,7 @@ async function activarFCM() {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
-    if (!VAPID_KEY || VAPID_KEY === "BPW4FiIUjrDAz1XLRrYrCZQJWxQ-DCLg4V2AtfB-L1rq0b0hn7PVf0xirecKtZjHZMPhizWmA6mZBbY3fDJvpdQ") {
+    if (!VAPID_KEY) {
         console.warn("[FCM] VAPID_KEY no configurada. Las notificaciones con app cerrada no funcionarán.");
         return;
     }
