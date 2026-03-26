@@ -441,17 +441,36 @@ async function notificarNuevoPedido(pedido) {
     const cantItems = (pedido.items || []).length;
     const itemsTxt  = cantItems === 1 ? "1 producto" : `${cantItems} productos`;
 
+    // ─── 0. Toast + sonido en pantalla (app abierta) ─────────────────
+    mostrarToast(`🛍 Nuevo pedido de ${nombre} - $${total} - ${itemsTxt}`, 'info', 8000);
+
+    // Sonido de notificación
+    try {
+        const ctx = new (window.AudioContext || window.webkitAudioContext)();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.frequency.setValueAtTime(880, ctx.currentTime);
+        osc.frequency.setValueAtTime(1100, ctx.currentTime + 0.1);
+        osc.frequency.setValueAtTime(880, ctx.currentTime + 0.2);
+        gain.gain.setValueAtTime(0.3, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.4);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.4);
+    } catch(e) { /* silenciar si no hay AudioContext */ }
+
     // ─── 1. ntfy.sh: llega aunque el celu esté bloqueado ─────────────────────
     try {
         await fetch("https://ntfy.sh/Carlo_essential", {
             method: "POST",
             headers: {
-                "Title":        "🛍\uFE0F Nuevo pedido en tienda",
+                "Title":        "Nuevo pedido en tienda",
                 "Priority":     "high",
                 "Tags":         "shopping,bell",
                 "Content-Type": "text/plain"
             },
-            body: `${nombre}  ·  $${total}  ·  ${itemsTxt}`
+            body: `${nombre} - $${total} - ${itemsTxt}`
         });
         console.log("[ntfy] Notificación enviada ✓");
     } catch(e) {
