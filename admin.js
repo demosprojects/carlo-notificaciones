@@ -697,16 +697,27 @@ window.verDetallePedido = function(id) {
             <div class="bg-white/3 rounded-xl p-3 border border-white/5">
                 <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Envío</p>
                 <p class="text-sm font-bold ${p.envio === 'Si' ? 'text-[#d4af37]' : 'text-gray-400'}">
-                    ${p.envio === 'Si' ? '🚚 Con envío' : p.envio === 'No' ? '🏪 Retira' : '—'}
+                    ${p.envio === 'Si' ? ' Con envío' : p.envio === 'No' ? ' Retira' : '—'}
                 </p>
             </div>
         </div>
         <div class="bg-white/3 rounded-xl p-3 mb-3 border border-white/5">
             <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-3">Piezas del pedido</p>
             ${itemsHTML}
-            <div class="flex justify-between pt-4 mt-2 border-t border-white/5">
-                <p class="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Total a cobrar</p>
-                <p class="text-[#d4af37] font-bold text-xl">$${Number(p.total).toLocaleString('es-AR')}</p>
+            <div class="pt-3 mt-2 border-t border-white/5 space-y-2">
+                ${p.envio === 'Si' ? `
+                <div class="flex justify-between">
+                    <p class="text-gray-500 text-[10px]">Subtotal productos</p>
+                    <p class="text-gray-400 text-[10px]">$${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</p>
+                </div>
+                <div class="flex justify-between">
+                    <p class="text-gray-500 text-[10px]">Envío</p>
+                    <p class="text-[#d4af37] text-[10px] font-bold">+ $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</p>
+                </div>` : ''}
+                <div class="flex justify-between pt-2 border-t border-white/5">
+                    <p class="text-gray-400 font-bold uppercase tracking-widest text-[10px]">Total a cobrar</p>
+                    <p class="text-[#d4af37] font-bold text-xl">$${Number(p.total).toLocaleString('es-AR')}</p>
+                </div>
             </div>
         </div>
         <p class="text-[9px] text-gray-600 text-right italic">Recibido: ${fecha}</p>
@@ -853,9 +864,19 @@ window.imprimirTicket = function(id) {
             </tbody>
         </table>
 
+        ${p.envio === 'Si' ? `
+        <div style="text-align: right; font-size: 11px; padding-top: 5px; border-top: 1px dashed #000;">
+            <div style="margin-bottom: 3px;">SUBTOTAL PRODUCTOS: $${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</div>
+            <div style="margin-bottom: 5px;">ENVÍO: $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</div>
+        </div>
         <div class="total-row">
             TOTAL: $${Number(p.total).toLocaleString('es-AR')}
         </div>
+        ` : `
+        <div class="total-row">
+            TOTAL: $${Number(p.total).toLocaleString('es-AR')}
+        </div>
+        `}
 
         <div class="footer">
             ¡Gracias por tu compra!<br>
