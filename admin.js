@@ -75,7 +75,7 @@ function aplicarFiltros() {
     const conStock = productos.filter(estaDisponible).length;
     const sinStock = total - conStock;
     document.getElementById('stats-text').innerText =
-        `${productosFiltrados.length} de ${total} piezas  \u00b7  ${conStock} con stock  \u00b7  ${sinStock} sin stock`;
+        `${productosFiltrados.length} de ${total} piezas  ·  ${conStock} con stock  ·  ${sinStock} sin stock`;
 
     renderAdmin();
 }
@@ -154,16 +154,18 @@ window.guardarProducto = async () => {
     try {
         if(id) {
             await updateDoc(doc(db, "products", id), datos);
+            // Actualizar localmente sin recargar
             const idx = productos.findIndex(x => x.id === id);
             if (idx !== -1) productos[idx] = { ...productos[idx], ...datos };
         } else {
             datos.fechaCreacion = Date.now();
             const docRef = await addDoc(collection(db, "products"), datos);
+            // Agregar localmente sin recargar
             productos.unshift({ id: docRef.id, ...datos });
         }
         cerrarModalAdmin();
         aplicarFiltros();
-        mostrarToast(id ? 'Producto actualizado con \u00e9xito' : 'Producto cargado con \u00e9xito', 'success');
+        mostrarToast(id ? 'Producto actualizado con éxito' : 'Producto cargado con éxito', 'success');
     } catch(e) {
         mostrarToast('Error al guardar el producto', 'error');
     } finally {
@@ -231,6 +233,7 @@ window.eliminarProducto = (id) => {
         btnClone.classList.add("btn-loading");
         try {
             await deleteDoc(doc(db, "products", id));
+            // Quitar localmente sin recargar
             productos = productos.filter(x => x.id !== id);
             cerrarModalConfirm("modal-eliminar");
             aplicarFiltros();
@@ -296,7 +299,7 @@ function limpiarForm() {
 }
 
 // ============================================
-// SISTEMA DE TOASTS Y CONFIRMACI\u00d3N ELEGANTE
+// SISTEMA DE TOASTS Y CONFIRMACIÓN ELEGANTE
 // ============================================
 
 window.mostrarToast = function(mensaje, tipo = 'success', duracion = 3000) {
@@ -345,7 +348,7 @@ document.getElementById('btn-confirm-accion-ok')?.addEventListener('click', asyn
 });
 
 // ============================================
-// M\u00d3DULO DE PEDIDOS
+// MÓDULO DE PEDIDOS
 // ============================================
 
 let todosLosPedidos = [];
@@ -378,10 +381,12 @@ window.mostrarSeccion = function(seccion) {
 // ESCUCHA DE PEDIDOS EN TIEMPO REAL (MEJORADO)
 // ============================================
 
+// null = primera carga aún no procesada
 let pedidosConocidos = null;
 let _snapshotUnsub = null;
 
 function escucharPedidosEnTiempoReal() {
+    // Evitar listeners duplicados si se llama más de una vez
     if (_snapshotUnsub) {
         _snapshotUnsub();
         _snapshotUnsub = null;
@@ -393,8 +398,10 @@ function escucharPedidosEnTiempoReal() {
         const pedidosNuevos = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
         if (pedidosConocidos === null) {
+            // Primera carga: registrar todos los IDs existentes sin notificar
             pedidosConocidos = new Set(pedidosNuevos.map(p => p.id));
         } else {
+            // Cargas siguientes: detectar IDs nuevos
             pedidosNuevos.forEach(p => {
                 if (!pedidosConocidos.has(p.id)) {
                     pedidosConocidos.add(p.id);
@@ -413,12 +420,13 @@ function escucharPedidosEnTiempoReal() {
         if (grid)   grid.classList.remove('hidden');
     }, (error) => {
         console.error("[Admin] Error en onSnapshot:", error);
+        // Reconectar automáticamente después de 5 segundos
         _snapshotUnsub = null;
         setTimeout(escucharPedidosEnTiempoReal, 5000);
     });
 }
 
-// \u2500\u2500\u2500 NOTIFICACIONES \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── NOTIFICACIONES ──────────────────────────────────────────────────────────
 
 async function solicitarPermisoNotificaciones() {
     if (!("Notification" in window) || !navigator.serviceWorker) return;
@@ -429,17 +437,21 @@ async function solicitarPermisoNotificaciones() {
         if (permiso !== "granted") return;
     }
 
-    console.log("[Admin] Notificaciones activadas \u2713");
+    console.log("[Admin] Notificaciones activadas ✓");
 }
 
+// Notificación vía ntfy.sh (llega SIEMPRE, celular bloqueado o app cerrada)
+// + vía Service Worker cuando la app está abierta
 async function notificarNuevoPedido(pedido) {
     const nombre    = pedido.nombre || "Cliente";
     const total     = Number(pedido.total || 0).toLocaleString("es-AR");
     const cantItems = (pedido.items || []).length;
     const itemsTxt  = cantItems === 1 ? "1 producto" : `${cantItems} productos`;
 
+    // ─── 0. Toast + sonido en pantalla (app abierta) ─────────────────
     mostrarToast(`Nuevo pedido`, 'info', 8000);
 
+    // Sonido de notificación
     try {
         const ctx = new (window.AudioContext || window.webkitAudioContext)();
         const osc = ctx.createOscillator();
@@ -454,16 +466,23 @@ async function notificarNuevoPedido(pedido) {
         osc.start(ctx.currentTime);
         osc.stop(ctx.currentTime + 0.4);
     } catch(e) { /* silenciar si no hay AudioContext */ }
+
+    // ntfy.sh es manejado exclusivamente por el servidor de Render
+    // para evitar notificaciones duplicadas cuando el admin está abierto.
+
 }
 
-// \u2500\u2500\u2500 FCM \u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500
+// ─── FCM: NOTIFICACIONES CON APP CERRADA ─────────────────────────────────────
+// Permite recibir notificaciones incluso cuando el celular está bloqueado
+// y la app web está completamente cerrada.
+// Requiere: reemplazar VAPID_KEY arriba con tu clave real de Firebase Console.
 
 async function activarFCM() {
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
     if (!VAPID_KEY) {
-        console.warn("[FCM] VAPID_KEY no configurada. Las notificaciones con app cerrada no funcionar\u00e1n.");
+        console.warn("[FCM] VAPID_KEY no configurada. Las notificaciones con app cerrada no funcionarán.");
         return;
     }
 
@@ -476,9 +495,11 @@ async function activarFCM() {
 
         if (token) {
             console.log("[FCM] Token obtenido:", token);
+            // Guardar el token en Firestore asociado al usuario admin
             const uid = auth.currentUser?.uid;
             if (uid) {
                 await updateDoc(doc(db, "admins", uid), { fcmToken: token }).catch(() => {
+                    // Si el doc no existe, crearlo
                     import("https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js")
                         .then(({ setDoc }) => setDoc(doc(db, "admins", uid), { fcmToken: token }, { merge: true }));
                 });
@@ -488,8 +509,11 @@ async function activarFCM() {
         console.warn("[FCM] Error al activar FCM:", e);
     }
 
+    // Manejar notificaciones FCM cuando la app está en primer plano
     onMessage(messaging, (payload) => {
         console.log("[FCM] Mensaje en foreground:", payload);
+        // La notificación background la maneja el SW automáticamente.
+        // Cuando la app está abierta, podemos mostrar nuestro propio toast.
         const data = payload.data || {};
         if (data.nombre) {
             mostrarToast(`Nuevo pedido`, 'info', 6000);
@@ -497,6 +521,8 @@ async function activarFCM() {
     });
 }
 
+// Cuando el usuario hace clic en la notificación y el SW nos avisa
+// que hay que abrir el detalle de un pedido
 if (navigator.serviceWorker) {
     navigator.serviceWorker.addEventListener("message", (event) => {
         const { type, pedidoId } = event.data || {};
@@ -561,7 +587,7 @@ window.filtrarPedidos = function() {
     const total      = sinCompletados.length;
     const pendientes = cuentas.pendiente;
     const statsEl    = document.getElementById('pedidos-stats');
-    if (statsEl) statsEl.textContent = `${pedidosFiltrados.length} de ${total} pedidos activos  \u00b7  ${pendientes} pendientes`;
+    if (statsEl) statsEl.textContent = `${pedidosFiltrados.length} de ${total} pedidos activos  ·  ${pendientes} pendientes`;
 
     renderPedidos();
 };
@@ -573,7 +599,7 @@ function renderPedidos() {
     if (pedidosFiltrados.length === 0) {
         grid.innerHTML = `
             <div class="py-20 text-center">
-                <p class="text-gray-600 font-luxury text-xl">No hay pedidos a\u00fan.</p>
+                <p class="text-gray-600 font-luxury text-xl">No hay pedidos aún.</p>
             </div>`;
         return;
     }
@@ -582,7 +608,7 @@ function renderPedidos() {
         const fecha   = new Date(p.fecha).toLocaleDateString('es-AR', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' });
         const estadoClass = `estado-${p.estado || 'pendiente'}`;
         const estadoLabel = ESTADOS.find(e => e.key === p.estado)?.label || 'Pendiente';
-        const itemsResumen = (p.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(' \u00b7 ');
+        const itemsResumen = (p.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(' · ');
 
         return `
         <div onclick="verDetallePedido('${p.id}')" class="pedido-card cursor-pointer bg-[#0a0a0a] rounded-2xl p-4 border border-white/5 hover:border-[#d4af37]/40 transition-all active:scale-[0.98]">
@@ -622,7 +648,7 @@ window.verDetallePedido = function(id) {
             ${item.imagen ? `<img src="${item.imagen}" class="w-14 h-14 rounded-xl object-cover flex-shrink-0 bg-black border border-white/10">` : '<div class="w-14 h-14 rounded-xl bg-white/5 flex-shrink-0"></div>'}
             <div class="flex-1 min-w-0">
                 <p class="text-white text-sm truncate font-bold">${item.nombre}</p>
-                <p class="text-gray-500 text-[10px]">x${item.cantidad} \u00b7 $${Number(item.precio).toLocaleString('es-AR')} c/u</p>
+                <p class="text-gray-500 text-[10px]">x${item.cantidad} · $${Number(item.precio).toLocaleString('es-AR')} c/u</p>
             </div>
             <p class="text-[#d4af37] text-sm font-bold flex-shrink-0">$${Number(item.subtotal).toLocaleString('es-AR')}</p>
         </div>
@@ -637,9 +663,6 @@ window.verDetallePedido = function(id) {
             <div class="flex gap-2">
                 <button onclick="imprimirTicket('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Imprimir Ticket">
                     <i class="fa-solid fa-print text-sm"></i>
-                </button>
-                <button onclick="descargarTicketPNG('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Descargar PNG para t\u00e9rmica">
-                    <i class="fa-solid fa-image text-sm"></i>
                 </button>
                 <button onclick="descargarTicketPDF('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Descargar PDF">
                     <i class="fa-solid fa-file-arrow-down text-sm"></i>
@@ -668,9 +691,9 @@ window.verDetallePedido = function(id) {
                 <p class="text-white text-sm">${p.medioPago}</p>
             </div>
             <div class="bg-white/3 rounded-xl p-3 border border-white/5">
-                <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Env\u00edo</p>
+                <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Envío</p>
                 <p class="text-sm font-bold ${p.envio === 'Si' ? 'text-[#d4af37]' : 'text-gray-400'}">
-                    ${p.envio === 'Si' ? ' Con env\u00edo' : p.envio === 'No' ? ' Retira' : '\u2014'}
+                    ${p.envio === 'Si' ? ' Con envío' : p.envio === 'No' ? ' Retira' : '—'}
                 </p>
             </div>
         </div>
@@ -684,7 +707,7 @@ window.verDetallePedido = function(id) {
                     <p class="text-gray-400 text-[10px]">$${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</p>
                 </div>
                 <div class="flex justify-between">
-                    <p class="text-gray-500 text-[10px]">Env\u00edo</p>
+                    <p class="text-gray-500 text-[10px]">Envío</p>
                     <p class="text-[#d4af37] text-[10px] font-bold">+ $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</p>
                 </div>` : ''}
                 <div class="flex justify-between pt-2 border-t border-white/5">
@@ -751,7 +774,7 @@ window.cambiarEstadoPedido = async function(id, nuevoEstado, btnEl) {
         await updateDoc(doc(db, "orders", id), { estado: nuevoEstado });
         cerrarModalConfirm('modal-pedido-detalle');
         const labels = { pendiente: 'Pendiente', contactado: 'Contactado', completado: 'Completado', cancelado: 'Cancelado' };
-        const iconos = { pendiente: '\ud83d\udd50', contactado: '\ud83d\udcde', completado: '\u2705', cancelado: '\u2717' };
+        const iconos = { pendiente: '🕐', contactado: '📞', completado: '✅', cancelado: '✗' };
         mostrarToast(`${iconos[nuevoEstado] || ''} Pedido marcado como ${labels[nuevoEstado] || nuevoEstado}`,
             nuevoEstado === 'completado' ? 'success' : nuevoEstado === 'cancelado' ? 'error' : 'info');
     } catch(e) {
@@ -769,7 +792,7 @@ window.confirmarEliminarPedido = function(id) {
     const p = todosLosPedidos.find(x => x.id === id);
     mostrarConfirmAccion({
         titulo: 'Eliminar pedido',
-        texto: `\u00bfSeguro que quer\u00e9s eliminar el pedido de ${p?.nombre || 'este cliente'} definitivamente? Esta acci\u00f3n no se puede deshacer.`,
+        texto: `¿Seguro que querés eliminar el pedido de ${p?.nombre || 'este cliente'} definitivamente? Esta acción no se puede deshacer.`,
         labelOk: 'Eliminar',
         callback: async () => {
             await deleteDoc(doc(db, "orders", id));
@@ -780,7 +803,7 @@ window.confirmarEliminarPedido = function(id) {
     });
 };
 
-// --- FUNCI\u00d3N DE IMPRESI\u00d3N ---
+// --- FUNCIÓN DE IMPRESIÓN ---
 window.imprimirTicket = function(id) {
     const p = todosLosPedidos.find(x => x.id === id);
     if (!p) return;
@@ -808,7 +831,7 @@ window.imprimirTicket = function(id) {
     <body>
         <div class="header">
             <div class="logo">CARLO ESSENTIAL</div>
-            <div style="font-size: 9px; margin-top: 4px;">Villa \u00c1ngela, Chaco</div>
+            <div style="font-size: 9px; margin-top: 4px;">Villa Ángela, Chaco</div>
             <div style="font-size: 9px;">${fecha} hs</div>
         </div>
         
@@ -821,7 +844,7 @@ window.imprimirTicket = function(id) {
         <table class="items-table">
             <thead>
                 <tr>
-                    <th>DESCRIPCI\u00d3N</th>
+                    <th>DESCRIPCIÓN</th>
                     <th style="text-align: right;">CANT</th>
                     <th style="text-align: right;">TOTAL</th>
                 </tr>
@@ -840,7 +863,7 @@ window.imprimirTicket = function(id) {
         ${p.envio === 'Si' ? `
         <div style="text-align: right; font-size: 11px; padding-top: 5px; border-top: 1px dashed #000;">
             <div style="margin-bottom: 3px;">SUBTOTAL PRODUCTOS: $${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</div>
-            <div style="margin-bottom: 5px;">ENV\u00cdO: $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</div>
+            <div style="margin-bottom: 5px;">ENVÍO: $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</div>
         </div>
         <div class="total-row">
             TOTAL: $${Number(p.total).toLocaleString('es-AR')}
@@ -852,7 +875,7 @@ window.imprimirTicket = function(id) {
         `}
 
         <div class="footer">
-            \u00a1Gracias por tu compra!<br>
+            ¡Gracias por tu compra!<br>
             carloessential.com.ar
         </div>
 
@@ -870,123 +893,9 @@ window.imprimirTicket = function(id) {
     win.document.close();
 };
 
-// ============================================
-// DESCARGA DE TICKET COMO PNG (para t\u00e9rmica que imprime im\u00e1genes)
-// ============================================
-
-window.descargarTicketPNG = async function(id) {
-    const p = todosLosPedidos.find(x => x.id === id);
-    if (!p) return;
-
-    // Cargar html2canvas si no est\u00e1 disponible
-    if (!window.html2canvas) {
-        await new Promise((resolve, reject) => {
-            const script = document.createElement('script');
-            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
-            script.onload = resolve;
-            script.onerror = reject;
-            document.head.appendChild(script);
-        });
-    }
-
-    const fecha = new Date(p.fecha).toLocaleDateString('es-AR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
-
-    const envioHTML = p.envio === 'Si' ? `
-        <div style="border-top:1px dashed #ccc;padding-top:6px;margin-top:4px;">
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;margin-bottom:2px;">
-                <span>SUBTOTAL PRODUCTOS</span>
-                <span>$${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</span>
-            </div>
-            <div style="display:flex;justify-content:space-between;font-size:11px;color:#555;">
-                <span>ENV\u00cdO</span>
-                <span>$${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</span>
-            </div>
-        </div>
-    ` : '';
-
-    const itemsHTML = (p.items || []).map(item => `
-        <div style="display:flex;justify-content:space-between;align-items:flex-start;padding:5px 0;border-bottom:1px solid #eee;gap:8px;">
-            <div style="flex:1;font-size:11px;line-height:1.4;color:#111;">${item.nombre}</div>
-            <div style="font-size:11px;color:#555;white-space:nowrap;margin:0 8px;">x${item.cantidad}</div>
-            <div style="font-size:11px;font-weight:700;color:#111;white-space:nowrap;">$${Number(item.subtotal).toLocaleString('es-AR')}</div>
-        </div>
-    `).join('');
-
-    // Crear el nodo del ticket fuera de pantalla
-    const wrapper = document.createElement('div');
-    wrapper.style.cssText = `
-        position: fixed;
-        left: -9999px;
-        top: 0;
-        width: 320px;
-        background: #fff;
-        color: #000;
-        font-family: 'Courier New', Courier, monospace;
-        padding: 20px 18px 24px;
-        box-sizing: border-box;
-        z-index: -1;
-    `;
-
-    wrapper.innerHTML = `
-        <div style="text-align:center;border-bottom:1px dashed #999;padding-bottom:12px;margin-bottom:12px;">
-            <div style="font-size:17px;font-weight:900;letter-spacing:3px;text-transform:uppercase;">CARLO ESSENTIAL</div>
-            <div style="font-size:9px;color:#555;margin-top:3px;">Villa \u00c1ngela, Chaco</div>
-            <div style="font-size:9px;color:#555;margin-top:1px;">${fecha} hs</div>
-        </div>
-
-        <div style="margin-bottom:12px;font-size:11px;line-height:1.7;">
-            <div><span style="font-weight:700;">CLIENTE:</span> ${p.nombre}</div>
-            <div><span style="font-weight:700;">CONTACTO:</span> ${p.contacto}</div>
-            <div><span style="font-weight:700;">PAGO:</span> ${p.medioPago}</div>
-            ${p.envio === 'Si' ? '<div><span style="font-weight:700;">ENV\u00cdO:</span> Con env\u00edo</div>' : '<div><span style="font-weight:700;">RETIRA:</span> En local</div>'}
-        </div>
-
-        <div style="border-top:1px solid #000;border-bottom:1px solid #000;padding:4px 0;margin-bottom:8px;display:flex;justify-content:space-between;font-size:10px;font-weight:700;letter-spacing:0.5px;">
-            <span style="flex:1;">DESCRIPCI\u00d3N</span>
-            <span style="margin:0 8px;">CANT</span>
-            <span>TOTAL</span>
-        </div>
-
-        ${itemsHTML}
-
-        ${envioHTML}
-
-        <div style="border-top:2px solid #000;margin-top:8px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
-            <span style="font-size:12px;font-weight:900;letter-spacing:1px;">TOTAL A COBRAR</span>
-            <span style="font-size:18px;font-weight:900;">$${Number(p.total).toLocaleString('es-AR')}</span>
-        </div>
-
-        <div style="text-align:center;margin-top:18px;padding-top:10px;border-top:1px dashed #999;font-size:9px;color:#555;line-height:1.6;">
-            \u00a1Gracias por tu compra!<br>carloessential.com.ar
-        </div>
-    `;
-
-    document.body.appendChild(wrapper);
-
-    try {
-        const canvas = await html2canvas(wrapper, {
-            scale: 3, // 3x = alta resoluci\u00f3n para t\u00e9rmica
-            backgroundColor: '#ffffff',
-            useCORS: true,
-            logging: false
-        });
-
-        const link = document.createElement('a');
-        link.download = `ticket-${p.nombre.replace(/\s+/g, '-')}.png`;
-        link.href = canvas.toDataURL('image/png');
-        link.click();
-    } catch(e) {
-        mostrarToast('Error al generar la imagen', 'error');
-        console.error('[PNG Ticket]', e);
-    } finally {
-        document.body.removeChild(wrapper);
-    }
-};
 
 // ============================================
-// DESCARGA DE TICKET COMO PDF (para celular / t\u00e9rmica)
+// DESCARGA DE TICKET COMO PDF (para celular / térmica)
 // ============================================
 
 window.descargarTicketPDF = async function(id) {
@@ -1101,7 +1010,7 @@ window.descargarTicketPDF = async function(id) {
     doc.save('ticket-' + p.nombre.replace(/\s+/g, '-') + '.pdf');
 };
 
-// Inicializar navegaci\u00f3n: marcar inventario como activo al cargar
+// Inicializar navegación: marcar inventario como activo al cargar
 document.addEventListener('DOMContentLoaded', () => {
     mostrarSeccion('inventario');
     const chipTodos = document.getElementById('chip-todos');
@@ -1119,7 +1028,7 @@ window.abrirArchivoCompletados = function() {
 
     if (stats) {
         const totalArchivado = completados.reduce((acc, p) => acc + (Number(p.total) || 0), 0);
-        stats.textContent = `${completados.length} pedidos completados \u00b7 Total $${totalArchivado.toLocaleString('es-AR')}`;
+        stats.textContent = `${completados.length} pedidos completados · Total $${totalArchivado.toLocaleString('es-AR')}`;
     }
 
     if (!body) return;
@@ -1128,13 +1037,13 @@ window.abrirArchivoCompletados = function() {
         body.innerHTML = `
             <div class="py-16 text-center">
                 <i class="fa-solid fa-box-open text-3xl text-gray-700 mb-4 block"></i>
-                <p class="text-gray-600 font-luxury text-lg">El archivo est\u00e1 vac\u00edo</p>
-                <p class="text-gray-700 text-xs mt-2">Los pedidos marcados como "Completado" aparecer\u00e1n aqu\u00ed.</p>
+                <p class="text-gray-600 font-luxury text-lg">El archivo está vacío</p>
+                <p class="text-gray-700 text-xs mt-2">Los pedidos marcados como "Completado" aparecerán aquí.</p>
             </div>`;
     } else {
         body.innerHTML = completados.map(p => {
             const fecha = new Date(p.fecha).toLocaleDateString('es-AR', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            const itemsResumen = (p.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(' \u00b7 ');
+            const itemsResumen = (p.items || []).map(i => `${i.nombre} x${i.cantidad}`).join(' · ');
             return `
             <div style="background:#0f0f0f;border:1px solid rgba(52,211,153,0.12);border-radius:1rem;padding:1rem 1.1rem;display:flex;align-items:flex-start;justify-content:space-between;gap:1rem;flex-wrap:wrap;">
                 <div style="flex:1;min-width:0;">
@@ -1150,4 +1059,97 @@ window.abrirArchivoCompletados = function() {
                     <p style="color:#34d399;font-weight:700;font-size:1.1rem;">$${Number(p.total).toLocaleString('es-AR')}</p>
                     <p style="font-size:9px;color:#4b5563;margin-top:2px;">${fecha}</p>
                     <div style="display:flex;gap:0.4rem;margin-top:0.5rem;justify-content:flex-end;">
-                        <button onclick="imprimirTicket('${p.id}')" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.05);border:none;color
+                        <button onclick="imprimirTicket('${p.id}')" style="width:30px;height:30px;border-radius:50%;background:rgba(255,255,255,0.05);border:none;color:#9ca3af;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(255,255,255,0.1)'" onmouseout="this.style.background='rgba(255,255,255,0.05)'" title="Imprimir ticket">
+                            <i class="fa-solid fa-print" style="font-size:10px;"></i>
+                        </button>
+                        <button onclick="eliminarDelArchivo('${p.id}', this)" style="width:30px;height:30px;border-radius:50%;background:rgba(248,113,113,0.1);border:none;color:#f87171;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;" onmouseover="this.style.background='rgba(248,113,113,0.2)'" onmouseout="this.style.background='rgba(248,113,113,0.1)'" title="Eliminar permanentemente">
+                            <i class="fa-solid fa-trash-can" style="font-size:10px;"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>`;
+        }).join('');
+    }
+
+    abrirModalConfirm('modal-archivo');
+};
+
+window.eliminarDelArchivo = function(id, btnEl) {
+    const p = todosLosPedidos.find(x => x.id === id);
+    mostrarConfirmAccion({
+        titulo: 'Eliminar del archivo',
+        texto: `¿Eliminar el pedido de ${p?.nombre || 'este cliente'} permanentemente del archivo?`,
+        labelOk: 'Eliminar',
+        callback: async () => {
+            await deleteDoc(doc(db, 'orders', id));
+            cerrarConfirmAccion();
+            mostrarToast('Pedido eliminado del archivo', 'error');
+            const card = btnEl?.closest('div[style*="background:#0f0f0f"]');
+            if (card) {
+                card.style.transition = 'opacity 0.3s, transform 0.3s';
+                card.style.opacity = '0';
+                card.style.transform = 'scale(0.97)';
+                setTimeout(() => {
+                    card.remove();
+                    const body = document.getElementById('archivo-body');
+                    const stats = document.getElementById('archivo-stats');
+                    const completados = todosLosPedidos.filter(p => p.estado === 'completado');
+                    if (stats) {
+                        const total = completados.reduce((a, p) => a + (Number(p.total) || 0), 0);
+                        stats.textContent = `${completados.length} pedidos completados · Total $${total.toLocaleString('es-AR')}`;
+                    }
+                    if (body && body.children.length === 0) {
+                        body.innerHTML = `<div style="padding:4rem 0;text-align:center;"><i class="fa-solid fa-box-open" style="font-size:2rem;color:#374151;display:block;margin-bottom:1rem;"></i><p style="font-family:'Cormorant Garamond',serif;font-size:1.1rem;color:#4b5563;">El archivo está vacío</p></div>`;
+                    }
+                }, 300);
+            }
+        }
+    });
+};
+// ============================================
+// WAKE LOCK + RECONEXIÓN EN BACKGROUND
+// Mantiene la app activa con pantalla bloqueada
+// y reconecta Firebase si se cortó la conexión.
+// ============================================
+
+let _wakeLock = null;
+
+// Pedir Wake Lock para evitar que Android suspenda la pestaña
+async function activarWakeLock() {
+    if (!('wakeLock' in navigator)) {
+        console.warn('[WakeLock] No soportado en este navegador/dispositivo.');
+        return;
+    }
+    try {
+        _wakeLock = await navigator.wakeLock.request('screen');
+        console.log('[WakeLock] Activo ✓');
+        _wakeLock.addEventListener('release', () => {
+            console.log('[WakeLock] Liberado (pantalla apagada o sistema lo canceló)');
+        });
+    } catch (e) {
+        console.warn('[WakeLock] No se pudo activar:', e.message);
+    }
+}
+
+// Reactivar Wake Lock cuando la pantalla vuelve a estar visible
+// (el sistema lo libera al bloquear, hay que pedirlo de nuevo al desbloquear)
+document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible') {
+        console.log('[Visibility] App visible de nuevo — reconectando...');
+
+        // Reactivar Wake Lock
+        await activarWakeLock();
+
+        // Reconectar el listener de Firestore por si se cayó
+        escucharPedidosEnTiempoReal();
+    }
+});
+
+// Reconexión extra por si la red se corta y vuelve
+window.addEventListener('online', () => {
+    console.log('[Network] Conexión restaurada — reconectando Firestore...');
+    escucharPedidosEnTiempoReal();
+});
+
+// Arrancar Wake Lock al cargar la app
+activarWakeLock();
