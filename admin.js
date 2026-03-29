@@ -442,7 +442,7 @@ async function notificarNuevoPedido(pedido) {
     const itemsTxt  = cantItems === 1 ? "1 producto" : `${cantItems} productos`;
 
     // ─── 0. Toast + sonido en pantalla (app abierta) ─────────────────
-    mostrarToast(`🛍 Nuevo pedido de ${nombre} - $${total} - ${itemsTxt}`, 'info', 8000);
+    mostrarToast(`Nuevo pedido`, 'info', 8000);
 
     // Sonido de notificación
     try {
@@ -509,7 +509,7 @@ async function activarFCM() {
         // Cuando la app está abierta, podemos mostrar nuestro propio toast.
         const data = payload.data || {};
         if (data.nombre) {
-            mostrarToast(`🛍️ Nuevo pedido de ${data.nombre}`, 'info', 6000);
+            mostrarToast(`Nuevo pedido`, 'info', 6000);
         }
     });
 }
