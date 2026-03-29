@@ -657,6 +657,9 @@ window.verDetallePedido = function(id) {
                 <button onclick="imprimirTicket('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Imprimir Ticket">
                     <i class="fa-solid fa-print text-sm"></i>
                 </button>
+                <button onclick="descargarTicketPDF('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Descargar PDF">
+                    <i class="fa-solid fa-file-arrow-down text-sm"></i>
+                </button>
                 <button onclick="confirmarEliminarPedido('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-red-900/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all">
                     <i class="fa-solid fa-trash-can text-sm"></i>
                 </button>
@@ -881,6 +884,123 @@ window.imprimirTicket = function(id) {
     const win = window.open('', '_blank', 'width=450,height=600');
     win.document.write(ticketHTML);
     win.document.close();
+};
+
+
+// ============================================
+// DESCARGA DE TICKET COMO PDF (para celular / térmica)
+// ============================================
+
+window.descargarTicketPDF = async function(id) {
+    const p = todosLosPedidos.find(x => x.id === id);
+    if (!p) return;
+
+    if (!window.jspdf) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF({ unit: 'mm', format: [80, 297], orientation: 'portrait' });
+
+    const fecha = new Date(p.fecha).toLocaleDateString('es-AR', {
+        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
+    });
+
+    const margen = 5;
+    let y = 8;
+
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(13);
+    doc.text('CARLO ESSENTIAL', 40, y, { align: 'center' });
+    y += 5;
+
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(7);
+    doc.text('Villa Angela, Chaco', 40, y, { align: 'center' });
+    y += 4;
+    doc.text(fecha + ' hs', 40, y, { align: 'center' });
+    y += 4;
+
+    doc.setLineDashPattern([1, 1], 0);
+    doc.line(margen, y, 80 - margen, y);
+    y += 5;
+
+    doc.setFontSize(8);
+    doc.setFont('courier', 'bold');
+    doc.text('CLIENTE:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(' ' + p.nombre, margen + 15, y);
+    y += 4;
+    doc.setFont('courier', 'bold');
+    doc.text('CONTACTO:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(' ' + p.contacto, margen + 18, y);
+    y += 4;
+    doc.setFont('courier', 'bold');
+    doc.text('PAGO:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(' ' + p.medioPago, margen + 10, y);
+    y += 5;
+
+    doc.setLineDashPattern([], 0);
+    doc.line(margen, y, 80 - margen, y);
+    y += 3;
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(7);
+    doc.text('DESCRIPCION', margen, y);
+    doc.text('C', 58, y, { align: 'right' });
+    doc.text('TOTAL', 75, y, { align: 'right' });
+    y += 2;
+    doc.line(margen, y, 80 - margen, y);
+    y += 4;
+
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(8);
+    (p.items || []).forEach(item => {
+        const lineas = doc.splitTextToSize(item.nombre, 45);
+        doc.text(lineas, margen, y);
+        doc.text(String(item.cantidad), 58, y, { align: 'right' });
+        doc.text('$' + Number(item.subtotal).toLocaleString('es-AR'), 75, y, { align: 'right' });
+        y += lineas.length * 4 + 1;
+    });
+
+    if (p.envio === 'Si') {
+        y += 1;
+        doc.setLineDashPattern([1, 1], 0);
+        doc.line(margen, y, 80 - margen, y);
+        y += 4;
+        doc.setFontSize(7);
+        const subTotal = Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000)));
+        doc.text('SUBTOTAL: $' + subTotal.toLocaleString('es-AR'), 75, y, { align: 'right' });
+        y += 4;
+        doc.text('ENVIO: $' + Number(p.costoEnvio || 2000).toLocaleString('es-AR'), 75, y, { align: 'right' });
+        y += 2;
+    }
+
+    doc.setLineDashPattern([1, 1], 0);
+    doc.line(margen, y, 80 - margen, y);
+    y += 5;
+    doc.setFont('courier', 'bold');
+    doc.setFontSize(10);
+    doc.text('TOTAL: $' + Number(p.total).toLocaleString('es-AR'), 75, y, { align: 'right' });
+    y += 7;
+
+    doc.setLineDashPattern([], 0);
+    doc.line(margen, y, 80 - margen, y);
+    y += 4;
+    doc.setFont('courier', 'normal');
+    doc.setFontSize(7);
+    doc.text('Gracias por tu compra!', 40, y, { align: 'center' });
+    y += 4;
+    doc.text('carloessential.com.ar', 40, y, { align: 'center' });
+
+    doc.save('ticket-' + p.nombre.replace(/\s+/g, '-') + '.pdf');
 };
 
 // Inicializar navegación: marcar inventario como activo al cargar
