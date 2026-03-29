@@ -154,13 +154,18 @@ window.guardarProducto = async () => {
     try {
         if(id) {
             await updateDoc(doc(db, "products", id), datos);
+            // Actualizar localmente sin recargar
+            const idx = productos.findIndex(x => x.id === id);
+            if (idx !== -1) productos[idx] = { ...productos[idx], ...datos };
         } else {
             datos.fechaCreacion = Date.now();
-            await addDoc(collection(db, "products"), datos);
+            const docRef = await addDoc(collection(db, "products"), datos);
+            // Agregar localmente sin recargar
+            productos.unshift({ id: docRef.id, ...datos });
         }
         cerrarModalAdmin();
-        cargarProductos();
-        mostrarToast(id ? 'Producto actualizado' : 'Producto creado', 'success');
+        aplicarFiltros();
+        mostrarToast(id ? 'Producto actualizado con éxito' : 'Producto cargado con éxito', 'success');
     } catch(e) {
         mostrarToast('Error al guardar el producto', 'error');
     } finally {
@@ -228,8 +233,10 @@ window.eliminarProducto = (id) => {
         btnClone.classList.add("btn-loading");
         try {
             await deleteDoc(doc(db, "products", id));
+            // Quitar localmente sin recargar
+            productos = productos.filter(x => x.id !== id);
             cerrarModalConfirm("modal-eliminar");
-            cargarProductos();
+            aplicarFiltros();
             mostrarToast('Producto eliminado', 'error');
         } catch(e) {
             mostrarToast('Error al eliminar', 'error');
