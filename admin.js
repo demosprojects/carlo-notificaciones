@@ -460,22 +460,8 @@ async function notificarNuevoPedido(pedido) {
         osc.stop(ctx.currentTime + 0.4);
     } catch(e) { /* silenciar si no hay AudioContext */ }
 
-    // ─── 1. ntfy.sh: llega aunque el celu esté bloqueado ─────────────────────
-    try {
-        await fetch("https://ntfy.sh/Carlo_essential", {
-            method: "POST",
-            headers: {
-                "Title":        "Nuevo pedido en tu tienda",
-                "Priority":     "high",
-                "Tags":         "shopping,bell",
-                "Content-Type": "text/plain"
-            },
-            body: "Ingresa al admin para visualizarlo"
-        });
-        console.log("[ntfy] Notificación enviada ✓");
-    } catch(e) {
-        console.warn("[ntfy] Error al notificar:", e);
-    }
+    // ntfy.sh es manejado exclusivamente por el servidor de Render
+    // para evitar notificaciones duplicadas cuando el admin está abierto.
 
 }
 
