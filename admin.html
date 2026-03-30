@@ -1151,6 +1151,36 @@
         </div>
     </div>
 
+    <!-- MODAL PREVISUALIZACIÓN TICKET IMAGEN -->
+    <div id="modal-ticket-preview" style="display:none;position:fixed;inset:0;z-index:400;background:rgba(0,0,0,0.92);backdrop-filter:blur(16px);align-items:center;justify-content:center;padding:1rem;">
+        <div style="width:100%;max-width:360px;background:#0f0f0f;border:1px solid rgba(255,255,255,0.08);border-radius:1.75rem;overflow:hidden;display:flex;flex-direction:column;max-height:90svh;max-height:90vh;">
+            <div style="height:1px;background:linear-gradient(90deg,transparent,#d4af37,transparent);flex-shrink:0;"></div>
+            <div style="flex-shrink:0;display:flex;align-items:center;justify-content:space-between;padding:1rem 1.25rem 0.9rem;border-bottom:1px solid rgba(255,255,255,0.06);">
+                <div>
+                    <h3 style="font-family:'Cormorant Garamond',serif;font-size:1.2rem;color:#fff;font-weight:600;">Previsualización</h3>
+                    <p style="font-size:9px;color:#6b7280;font-weight:700;text-transform:uppercase;letter-spacing:0.15em;margin-top:2px;">Ticket · imagen PNG</p>
+                </div>
+                <button onclick="cerrarPreviewTicket()" style="width:32px;height:32px;border-radius:50%;background:rgba(255,255,255,0.06);border:none;color:#9ca3af;font-size:1.25rem;cursor:pointer;display:flex;align-items:center;justify-content:center;">&times;</button>
+            </div>
+            <div style="flex:1;overflow-y:auto;padding:1.25rem;display:flex;align-items:center;justify-content:center;">
+                <div style="background:#fff;border-radius:8px;overflow:hidden;box-shadow:0 8px 40px rgba(0,0,0,0.5);width:100%;display:flex;align-items:center;justify-content:center;">
+                    <div id="ticket-preview-loader" style="padding:3rem;text-align:center;">
+                        <div style="width:28px;height:28px;border:2px solid rgba(212,175,55,0.3);border-top-color:#d4af37;border-radius:50%;animation:spin 0.7s linear infinite;margin:0 auto 1rem;"></div>
+                        <p style="font-size:11px;color:#9ca3af;">Generando previsualización...</p>
+                    </div>
+                    <img id="ticket-preview-img" src="" alt="Preview ticket" style="display:none;width:100%;height:auto;border-radius:8px;">
+                </div>
+            </div>
+            <div style="flex-shrink:0;padding:1rem 1.25rem 1.25rem;border-top:1px solid rgba(255,255,255,0.06);display:flex;gap:0.75rem;">
+                <button onclick="cerrarPreviewTicket()" style="flex:1;padding:0.75rem;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.1);border-radius:99px;color:#9ca3af;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:0.1em;cursor:pointer;">Cancelar</button>
+                <button id="btn-descargar-ticket" onclick="ejecutarDescargaTicket()" style="flex:2;padding:0.75rem;background:#d4af37;border:none;border-radius:99px;color:#000;font-size:9px;font-weight:900;text-transform:uppercase;letter-spacing:0.15em;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:0.5rem;">
+                    <i class="fa-solid fa-download" style="font-size:11px;"></i>
+                    <span>Descargar ticket</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
     <!-- Toast container -->
     <div id="toast-container"></div>
 
