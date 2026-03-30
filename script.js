@@ -141,7 +141,7 @@ function renderProductos() {
                        <span class="bg-[#d4af37] text-black text-[8px] font-black px-2 py-0.5 rounded-full">-${pct}%</span>
                    </div>`
                 : `<p class="text-white/80 font-light tracking-widest text-sm">$ ${Number(p.precio).toLocaleString('es-AR')}</p>`)
-            : `<p class="text-gray-600 font-light tracking-widest text-xs uppercase">Sin disponibilidad</p>`;
+            : `<p class="text-gray-600 font-light tracking-widest text-xs uppercase">Sin stock</p>`;
 
         return `
             <div class="product-card group relative rounded-3xl overflow-hidden" onclick="verDetalles('${p.id}')">
@@ -200,18 +200,23 @@ function aplicarFiltros() {
     });
 
     // Ordenar:
-    //  1) Badge "Nuevo" con stock → primero, por fechaCreacion desc
-    //  2) Con stock sin badge     → por fechaCreacion desc (editar no mueve al tope)
-    //  3) Sin stock               → al final, por fechaCreacion desc
+    //  1) Sin stock → siempre al final (cualquier categoria)
+    //  2) Relojes con stock → primero
+    //  3) Otras categorias con stock → despues
+    //  Dentro de cada grupo: Nuevo primero, luego por fechaCreacion desc
     productosFiltrados.sort((a, b) => {
-        const grupo = p => {
-            if (p.disponible === false) return 2;
-            if (p.esNuevo === true)     return 0;
-            return 1;
-        };
-        const ga = grupo(a), gb = grupo(b);
-        if (ga !== gb) return ga - gb;
-        // Dentro del mismo grupo: fecha de creación (no de edición)
+        const sinStock = p => p.disponible === false ? 1 : 0;
+        const sa = sinStock(a), sb = sinStock(b);
+        if (sa !== sb) return sa - sb;
+
+        const esReloj = p => (p.categoria || '').toLowerCase() === 'relojes' ? 0 : 1;
+        const ra = esReloj(a), rb = esReloj(b);
+        if (ra !== rb) return ra - rb;
+
+        const esNuevo = p => p.esNuevo === true ? 0 : 1;
+        const na = esNuevo(a), nb = esNuevo(b);
+        if (na !== nb) return na - nb;
+
         const fa = a.fechaCreacion || a.fecha || 0;
         const fb = b.fechaCreacion || b.fecha || 0;
         return fb - fa;
@@ -797,6 +802,22 @@ window.abrirFormularioPedido = function() {
     document.getElementById("pedido-contacto").value = "";
     document.getElementById("pedido-pago").value = "";
     document.getElementById("pedido-envio").value = "";
+    document.getElementById("pedido-observacion").value = "";
+    // Reset botones de pago
+    ["btn-pago-efectivo", "btn-pago-transferencia"].forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.classList.remove("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+        b.classList.add("border-white/10", "bg-white/5", "text-white/50");
+    });
+    // Reset botones de entrega
+    ["btn-retiro", "btn-envio"].forEach(id => {
+        const b = document.getElementById(id);
+        if (!b) return;
+        b.classList.remove("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+        b.classList.add("border-white/10", "bg-white/5", "text-white/50");
+    });
+    document.getElementById("resumen-envio").classList.add("hidden");
     document.getElementById("modal-pedido").classList.remove("hidden");
 };
 
@@ -804,16 +825,86 @@ window.cerrarFormularioPedido = function() {
     document.getElementById("modal-pedido").classList.add("hidden");
 };
 
+// --- AJUSTE DEL MODAL AL TECLADO VIRTUAL (iOS + Android) ---
+// Los elementos fixed no se redimensionan cuando sube el teclado en mobile.
+// visualViewport sí sabe el tamaño real visible disponible y permite
+// reubicar el modal para que quede justo encima del teclado.
+(function() {
+    const vv = window.visualViewport;
+    if (!vv) return; // fallback: browsers muy viejos, no hacemos nada
+
+    function ajustarModal() {
+        if (window.innerWidth >= 768) return; // solo mobile
+
+        const modal = document.getElementById('modal-pedido');
+        if (!modal || modal.classList.contains('hidden')) return;
+
+        const sheet = modal.querySelector('.flex-col');
+        if (!sheet) return;
+
+        // Altura visible real (viewport menos teclado)
+        const alturaVisible = vv.height;
+        // Offset desde el top del layout (cuando el browser scrollea el body al abrir el teclado)
+        const offsetTop = vv.offsetTop;
+
+        // Reposicionar el overlay para que cubra solo el área visible
+        modal.style.top    = offsetTop + 'px';
+        modal.style.height = alturaVisible + 'px';
+        modal.style.bottom = 'auto';
+
+        // Limitar la altura máxima del sheet al área visible con margen
+        sheet.style.maxHeight = (alturaVisible * 0.98) + 'px';
+
+        // Hacer scroll al campo activo dentro del contenedor scrolleable
+        const activo = document.activeElement;
+        if (activo && (activo.tagName === 'INPUT' || activo.tagName === 'TEXTAREA')) {
+            setTimeout(() => {
+                activo.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }, 50);
+        }
+    }
+
+    function resetModal() {
+        if (window.innerWidth >= 768) return;
+        const modal = document.getElementById('modal-pedido');
+        if (!modal) return;
+        const sheet = modal.querySelector('.flex-col');
+
+        // Restaurar posición original cuando el teclado baja
+        modal.style.top    = '';
+        modal.style.height = '';
+        modal.style.bottom = '';
+        if (sheet) sheet.style.maxHeight = '';
+    }
+
+    vv.addEventListener('resize', ajustarModal);
+    vv.addEventListener('scroll', ajustarModal);
+
+    // Al hacer blur (cerrar teclado) restaurar
+    document.addEventListener('focusout', function(e) {
+        const modal = document.getElementById('modal-pedido');
+        if (!modal || modal.classList.contains('hidden')) return;
+        // Pequeño delay para distinguir blur real de cambio entre campos
+        setTimeout(() => {
+            const activo = document.activeElement;
+            if (!activo || (activo.tagName !== 'INPUT' && activo.tagName !== 'TEXTAREA')) {
+                resetModal();
+            }
+        }, 100);
+    });
+})();
+
 window.cerrarPedidoOk = function() {
     document.getElementById("modal-pedido-ok").classList.add("hidden");
     desbloquearScroll();
 };
 
 window.confirmarPedido = async function() {
-    const nombre   = document.getElementById("pedido-nombre").value.trim();
-    const contacto = document.getElementById("pedido-contacto").value.trim();
-    const pago     = document.getElementById("pedido-pago").value;
-    const envio    = document.getElementById("pedido-envio").value;
+    const nombre      = document.getElementById("pedido-nombre").value.trim();
+    const contacto    = document.getElementById("pedido-contacto").value.trim();
+    const pago        = document.getElementById("pedido-pago").value;
+    const envio       = document.getElementById("pedido-envio").value;
+    const observacion = document.getElementById("pedido-observacion").value.trim();
 
     if (!nombre || !contacto || !pago || !envio) {
         showToast("Completá todos los campos para continuar");
@@ -853,6 +944,7 @@ window.confirmarPedido = async function() {
             contacto,
             medioPago: pago,
             envio,
+            observacion,
             costoEnvio,
             subtotalProductos,
             items,
@@ -877,6 +969,58 @@ window.confirmarPedido = async function() {
         txtEl.classList.remove("hidden");
         spinEl.classList.add("hidden");
     }
+};
+
+window.seleccionarPago = function(valor) {
+    document.getElementById("pedido-pago").value = valor;
+
+    const btnEfectivo      = document.getElementById("btn-pago-efectivo");
+    const btnTransferencia = document.getElementById("btn-pago-transferencia");
+
+    [btnEfectivo, btnTransferencia].forEach(b => {
+        b.classList.remove("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+        b.classList.add("border-white/10", "bg-white/5", "text-white/50");
+    });
+
+    const activo = valor === "Efectivo" ? btnEfectivo : btnTransferencia;
+    activo.classList.remove("border-white/10", "bg-white/5", "text-white/50");
+    activo.classList.add("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+};
+
+window.seleccionarEnvio = function(valor) {
+    document.getElementById("pedido-envio").value = valor;
+
+    const btnRetiro = document.getElementById("btn-retiro");
+    const btnEnvio  = document.getElementById("btn-envio");
+
+    // Reset ambos
+    [btnRetiro, btnEnvio].forEach(b => {
+        b.classList.remove("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+        b.classList.add("border-white/10", "bg-white/5", "text-white/50");
+    });
+
+    // Activar el elegido
+    const activo = valor === "No" ? btnRetiro : btnEnvio;
+    activo.classList.remove("border-white/10", "bg-white/5", "text-white/50");
+    activo.classList.add("border-[#d4af37]", "bg-[#d4af37]/10", "text-white");
+
+    actualizarResumenEnvio();
+};
+
+window.actualizarResumenEnvio = function() {
+    const envio   = document.getElementById("pedido-envio").value;
+    const resumen = document.getElementById("resumen-envio");
+    const COSTO_ENVIO = 2000;
+
+    const subtotal   = carrito.reduce((acc, p) => acc + p.precio * p.cantidad, 0);
+    const costoEnvio = envio === "Si" ? COSTO_ENVIO : 0;
+    const total      = subtotal + costoEnvio;
+
+    document.getElementById("resumen-subtotal").textContent    = "$" + subtotal.toLocaleString("es-AR");
+    document.getElementById("resumen-costo-envio").textContent = envio === "Si" ? "+ $" + COSTO_ENVIO.toLocaleString("es-AR") : "Sin costo";
+    document.getElementById("resumen-total").textContent       = "$" + total.toLocaleString("es-AR");
+
+    resumen.classList.toggle("hidden", !envio);
 };
 
 // --- INICIO ---
