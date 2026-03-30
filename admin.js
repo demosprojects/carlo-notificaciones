@@ -21,7 +21,15 @@ const firebaseConfig = {
 const app = initializeApp(firebaseConfig);
 const db  = getFirestore(app);
 const auth = getAuth(app);
-const messaging = getMessaging(app);
+
+// getMessaging falla en HTTP (Live Server sin HTTPS) — lo protegemos
+// para que un error acá no rompa todo el módulo
+let messaging = null;
+try {
+    messaging = getMessaging(app);
+} catch(e) {
+    console.warn('[FCM] getMessaging no disponible (HTTP o sin SW):', e.message);
+}
 
 
 const VAPID_KEY = "BPW4FiIUjrDAz1XLRrYrCZQJWxQ-DCLg4V2AtfB-L1rq0b0hn7PVf0xirecKtZjHZMPhizWmA6mZBbY3fDJvpdQ";
@@ -478,6 +486,7 @@ async function notificarNuevoPedido(pedido) {
 // Requiere: reemplazar VAPID_KEY arriba con tu clave real de Firebase Console.
 
 async function activarFCM() {
+    if (!messaging) return; // no disponible en HTTP
     if (!("Notification" in window)) return;
     if (Notification.permission !== "granted") return;
     if (!navigator.serviceWorker) return;
@@ -510,15 +519,15 @@ async function activarFCM() {
     }
 
     // Manejar notificaciones FCM cuando la app está en primer plano
-    onMessage(messaging, (payload) => {
-        console.log("[FCM] Mensaje en foreground:", payload);
-        // La notificación background la maneja el SW automáticamente.
-        // Cuando la app está abierta, podemos mostrar nuestro propio toast.
-        const data = payload.data || {};
-        if (data.nombre) {
-            mostrarToast(`Nuevo pedido`, 'info', 6000);
-        }
-    });
+    if (messaging) {
+        onMessage(messaging, (payload) => {
+            console.log("[FCM] Mensaje en foreground:", payload);
+            const data = payload.data || {};
+            if (data.nombre) {
+                mostrarToast(`Nuevo pedido`, 'info', 6000);
+            }
+        });
+    }
 }
 
 // Cuando el usuario hace clic en la notificación y el SW nos avisa
@@ -667,6 +676,9 @@ window.verDetallePedido = function(id) {
                 <button onclick="descargarTicketPDF('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Descargar PDF">
                     <i class="fa-solid fa-file-arrow-down text-sm"></i>
                 </button>
+                <button onclick="previsualizarTicket('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-white/5 text-white/70 rounded-full hover:bg-white/10 transition-all" title="Previsualizar y descargar como imagen PNG">
+                    <i class="fa-solid fa-image text-sm"></i>
+                </button>
                 <button onclick="confirmarEliminarPedido('${p.id}')" class="w-10 h-10 flex items-center justify-center bg-red-900/20 text-red-500 rounded-full hover:bg-red-500 hover:text-white transition-all">
                     <i class="fa-solid fa-trash-can text-sm"></i>
                 </button>
@@ -693,9 +705,14 @@ window.verDetallePedido = function(id) {
             <div class="bg-white/3 rounded-xl p-3 border border-white/5">
                 <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Envío</p>
                 <p class="text-sm font-bold ${p.envio === 'Si' ? 'text-[#d4af37]' : 'text-gray-400'}">
-                    ${p.envio === 'Si' ? ' Con envío' : p.envio === 'No' ? ' Retira' : '—'}
+                    ${p.envio === 'Si' ? ' Con envío' : p.envio === 'No' ? ' Retira en local' : '—'}
                 </p>
             </div>
+            ${p.observacion ? `
+            <div class="bg-white/3 rounded-xl p-3 border border-white/5 col-span-2">
+                <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-1">Observaciones</p>
+                <p class="text-white text-sm leading-relaxed">${p.observacion}</p>
+            </div>` : ''}
         </div>
         <div class="bg-white/3 rounded-xl p-3 mb-3 border border-white/5">
             <p class="text-[9px] text-gray-500 uppercase tracking-widest mb-3">Piezas del pedido</p>
@@ -838,7 +855,9 @@ window.imprimirTicket = function(id) {
         <div class="info">
             <strong>CLIENTE:</strong> ${p.nombre}<br>
             <strong>CONTACTO:</strong> ${p.contacto}<br>
-            <strong>PAGO:</strong> ${p.medioPago}
+            <strong>PAGO:</strong> ${p.medioPago}<br>
+            <strong>ENTREGA:</strong> ${p.envio === 'Si' ? 'Con envío' : 'Retira en local'}
+            ${p.observacion ? `<br><strong>OBS:</strong> ${p.observacion}` : ''}
         </div>
 
         <table class="items-table">
@@ -915,9 +934,10 @@ window.descargarTicketPDF = async function(id) {
     const { jsPDF } = window.jspdf;
     const doc = new jsPDF({ unit: 'mm', format: [80, 297], orientation: 'portrait' });
 
-    const fecha = new Date(p.fecha).toLocaleDateString('es-AR', {
-        day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit'
-    });
+    const fechaObj  = new Date(p.fecha);
+    const fechaPart = fechaObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaPart  = fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fecha     = `${fechaPart} ${horaPart}`;
 
     const margen = 5;
     let y = 8;
@@ -931,7 +951,9 @@ window.descargarTicketPDF = async function(id) {
     doc.setFontSize(7);
     doc.text('Villa Angela, Chaco', 40, y, { align: 'center' });
     y += 4;
-    doc.text(fecha + ' hs', 40, y, { align: 'center' });
+    doc.text(fecha, 40, y, { align: 'center' });
+    y += 4;
+    doc.text('COMPROBANTE NO VALIDO COMO FACTURA', 40, y, { align: 'center' });
     y += 4;
 
     doc.setLineDashPattern([1, 1], 0);
@@ -953,7 +975,21 @@ window.descargarTicketPDF = async function(id) {
     doc.text('PAGO:', margen, y);
     doc.setFont('courier', 'normal');
     doc.text(' ' + p.medioPago, margen + 10, y);
-    y += 5;
+    y += 4;
+    doc.setFont('courier', 'bold');
+    doc.text('ENTREGA:', margen, y);
+    doc.setFont('courier', 'normal');
+    doc.text(' ' + (p.envio === 'Si' ? 'Con envio' : 'Retira en local'), margen + 16, y);
+    y += 4;
+    if (p.observacion) {
+        doc.setFont('courier', 'bold');
+        doc.text('OBS:', margen, y);
+        doc.setFont('courier', 'normal');
+        const obsLineas = doc.splitTextToSize(p.observacion, 55);
+        doc.text(obsLineas, margen + 9, y);
+        y += obsLineas.length * 4;
+    }
+    y += 1;
 
     doc.setLineDashPattern([], 0);
     doc.line(margen, y, 80 - margen, y);
@@ -1009,6 +1045,152 @@ window.descargarTicketPDF = async function(id) {
 
     doc.save('ticket-' + p.nombre.replace(/\s+/g, '-') + '.pdf');
 };
+
+// ============================================
+// DESCARGA DE TICKET COMO IMAGEN PNG (para impresora térmica tipo polaroid)
+// ============================================
+
+// --- TICKET IMAGEN: variable para guardar el dataURL entre preview y descarga ---
+let _ticketPreviewDataURL = null;
+let _ticketPreviewNombre  = null;
+
+// Construye el wrapper HTML del ticket y lo renderiza con html2canvas → devuelve dataURL
+async function _generarCanvasTicket(id) {
+    const p = todosLosPedidos.find(x => x.id === id);
+    if (!p) return null;
+
+    if (!window.html2canvas) {
+        await new Promise((resolve, reject) => {
+            const script = document.createElement('script');
+            script.src = 'https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js';
+            script.onload = resolve;
+            script.onerror = reject;
+            document.head.appendChild(script);
+        });
+    }
+
+    const fechaObj  = new Date(p.fecha);
+    const fechaPart = fechaObj.toLocaleDateString('es-AR', { day: '2-digit', month: '2-digit', year: 'numeric' });
+    const horaPart  = fechaObj.toLocaleTimeString('es-AR', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const fecha     = `${fechaPart} ${horaPart}`;
+
+    const wrapper = document.createElement('div');
+    wrapper.style.cssText = `position:fixed;left:-9999px;top:0;width:302px;background:#ffffff;color:#000000;font-family:'Courier New',Courier,monospace;font-size:12px;padding:16px 12px;box-sizing:border-box;z-index:-1;`;
+
+    const envioHTML = p.envio === 'Si' ? `
+        <div style="border-top:1px dashed #000;padding-top:6px;margin-top:6px;text-align:right;font-size:11px;">
+            <div>SUBTOTAL: $${Number(p.subtotalProductos || (p.total - (p.costoEnvio || 2000))).toLocaleString('es-AR')}</div>
+            <div>ENVÍO: $${Number(p.costoEnvio || 2000).toLocaleString('es-AR')}</div>
+        </div>
+        <div style="border-top:1px dashed #000;margin-top:6px;padding-top:6px;text-align:right;font-size:14px;font-weight:bold;">
+            TOTAL: $${Number(p.total).toLocaleString('es-AR')}
+        </div>` : `
+        <div style="border-top:1px dashed #000;margin-top:6px;padding-top:6px;text-align:right;font-size:14px;font-weight:bold;">
+            TOTAL: $${Number(p.total).toLocaleString('es-AR')}
+        </div>`;
+
+    wrapper.innerHTML = `
+        <div style="text-align:center;border-bottom:1px dashed #000;padding-bottom:10px;margin-bottom:10px;">
+            <div style="font-size:18px;font-weight:bold;text-transform:uppercase;letter-spacing:2px;">CARLO ESSENTIAL</div>
+            <div style="font-size:9px;margin-top:4px;">Villa Ángela, Chaco</div>
+            <div style="font-size:9px;">${fecha}</div>
+            <div style="font-size:8px;margin-top:5px;letter-spacing:0.5px;">COMPROBANTE NO VÁLIDO COMO FACTURA</div>
+        </div>
+        <div style="margin-bottom:10px;line-height:1.6;">
+            <strong>CLIENTE:</strong> ${p.nombre}<br>
+            <strong>CONTACTO:</strong> ${p.contacto}<br>
+            <strong>PAGO:</strong> ${p.medioPago}<br>
+            <strong>ENTREGA:</strong> ${p.envio === 'Si' ? 'Con envío' : 'Retira en local'}
+            ${p.observacion ? `<br><strong>OBS:</strong> ${p.observacion}` : ''}
+        </div>
+        <table style="width:100%;border-collapse:collapse;margin-bottom:8px;">
+            <thead>
+                <tr>
+                    <th style="text-align:left;border-bottom:1px solid #000;font-size:10px;padding-bottom:3px;">DESCRIPCIÓN</th>
+                    <th style="text-align:right;border-bottom:1px solid #000;font-size:10px;padding-bottom:3px;">CANT</th>
+                    <th style="text-align:right;border-bottom:1px solid #000;font-size:10px;padding-bottom:3px;">TOTAL</th>
+                </tr>
+            </thead>
+            <tbody>
+                ${(p.items || []).map(i => `
+                    <tr>
+                        <td style="font-size:10px;padding:4px 0;">${i.nombre}</td>
+                        <td style="text-align:right;padding:4px 0;">${i.cantidad}</td>
+                        <td style="text-align:right;padding:4px 0;">$${Number(i.subtotal).toLocaleString('es-AR')}</td>
+                    </tr>
+                `).join('')}
+            </tbody>
+        </table>
+        ${envioHTML}
+        <div style="text-align:center;margin-top:16px;font-size:10px;border-top:1px solid #000;padding-top:10px;">
+            ¡Gracias por tu compra!<br>carloessential.com.ar
+        </div>
+    `;
+
+    document.body.appendChild(wrapper);
+    try {
+        const canvas = await html2canvas(wrapper, { scale: 2, useCORS: true, backgroundColor: '#ffffff', logging: false });
+        return { dataURL: canvas.toDataURL('image/png'), nombre: p.nombre };
+    } finally {
+        document.body.removeChild(wrapper);
+    }
+}
+
+// Abre el modal de previsualización y genera la imagen
+window.previsualizarTicket = async function(id) {
+    const modal  = document.getElementById('modal-ticket-preview');
+    const loader = document.getElementById('ticket-preview-loader');
+    const img    = document.getElementById('ticket-preview-img');
+
+    // Reset estado
+    _ticketPreviewDataURL = null;
+    _ticketPreviewNombre  = null;
+    loader.style.display  = 'block';
+    img.style.display     = 'none';
+    img.src               = '';
+
+    // Mostrar modal
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    try {
+        const result = await _generarCanvasTicket(id);
+        if (!result) { cerrarPreviewTicket(); return; }
+
+        _ticketPreviewDataURL = result.dataURL;
+        _ticketPreviewNombre  = result.nombre;
+
+        img.src           = result.dataURL;
+        img.style.display = 'block';
+        loader.style.display = 'none';
+    } catch(e) {
+        cerrarPreviewTicket();
+        mostrarToast('Error al generar la previsualización', 'error');
+    }
+};
+
+// Cierra el modal de preview
+window.cerrarPreviewTicket = function() {
+    const modal = document.getElementById('modal-ticket-preview');
+    modal.style.display = 'none';
+    document.body.style.overflow = '';
+    _ticketPreviewDataURL = null;
+    _ticketPreviewNombre  = null;
+};
+
+// Dispara la descarga usando la imagen ya generada
+window.ejecutarDescargaTicket = function() {
+    if (!_ticketPreviewDataURL) return;
+    const link = document.createElement('a');
+    link.download = 'ticket-' + (_ticketPreviewNombre || 'pedido').replace(/\s+/g, '-') + '.png';
+    link.href = _ticketPreviewDataURL;
+    link.click();
+    cerrarPreviewTicket();
+    mostrarToast('✓ Ticket descargado', 'success');
+};
+
+// Mantener compatibilidad por si se llama desde archivo de completados
+window.descargarTicketImagen = window.previsualizarTicket;
 
 // Inicializar navegación: marcar inventario como activo al cargar
 document.addEventListener('DOMContentLoaded', () => {
@@ -1152,4 +1334,4 @@ window.addEventListener('online', () => {
 });
 
 // Arrancar Wake Lock al cargar la app
-activarWakeLock();
+activarWakeLock();
