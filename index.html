@@ -399,7 +399,8 @@
                 <h4 class="text-white text-sm uppercase tracking-widest mb-6 font-bold">Navegación</h4>
                 <ul class="space-y-3">
                     <li><a href="#" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Inicio</a></li>
-                    <li><a href="#" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Colecciones</a></li>
+                    <li><a href="#" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Productos</a></li>
+                    <li><a href="privacidad.html" class="text-gray-500 hover:text-[#d4af37] transition-colors text-sm">Politica de privacidad</a></li>
                 </ul>
             </div>
 
@@ -583,64 +584,113 @@
     </div>
 
     <!-- MODAL FORMULARIO PEDIDO -->
-    <div id="modal-pedido" class="fixed inset-0 z-[210] hidden flex items-center justify-center px-4" style="background: rgba(0,0,0,0.80); backdrop-filter: blur(10px);">
-        <div class="w-full max-w-sm bg-[#0f0f0f] border border-white/8 rounded-3xl shadow-2xl animate-[fadeInScale_0.25s_ease-out] flex flex-col" style="max-height: 92svh; max-height: 92vh;">
-            <div class="h-px w-full" style="background: linear-gradient(90deg, transparent, #d4af37, transparent);"></div>
-            <div class="px-7 pt-6 pb-4 flex items-center justify-between">
+    <!-- MODAL FORMULARIO PEDIDO — bottom sheet en móvil, centrado en desktop -->
+    <div id="modal-pedido" class="fixed inset-0 z-[210] hidden flex items-end md:items-center justify-center md:px-4" style="background: rgba(0,0,0,0.80); backdrop-filter: blur(10px);">
+        <div class="w-full md:max-w-md bg-[#0f0f0f] border border-white/8 md:rounded-3xl rounded-t-3xl shadow-2xl flex flex-col" style="max-height: 92svh; animation: slideUp 0.3s cubic-bezier(0.22,1,0.36,1);">
+
+            <!-- Handle pill solo en móvil -->
+            <div class="flex justify-center pt-3 pb-1 md:hidden">
+                <div class="w-9 h-1 rounded-full bg-white/15"></div>
+            </div>
+
+            <!-- Línea dorada -->
+            <div class="h-px w-full hidden md:block" style="background: linear-gradient(90deg, transparent, #d4af37, transparent);"></div>
+
+            <!-- Header -->
+            <div class="px-6 pt-4 pb-3 flex items-center justify-between flex-shrink-0">
                 <div>
                     <h3 class="font-luxury text-xl text-white tracking-wide">Completar pedido</h3>
                     <p class="text-[9px] uppercase tracking-[0.3em] text-gray-500 mt-0.5">Tus datos de contacto</p>
                 </div>
                 <button onclick="cerrarFormularioPedido()" class="w-8 h-8 flex items-center justify-center rounded-full bg-white/5 text-gray-500 hover:text-white hover:bg-white/10 transition-all text-lg leading-none">&times;</button>
             </div>
-            <div class="px-7 pb-3 space-y-4 overflow-y-auto" style="flex:1;">
-                <div>
-                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Nombre completo</label>
-                    <input id="pedido-nombre" type="text" placeholder="Tú nombre" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+
+            <!-- Campos — scroll interno -->
+            <div class="px-6 pb-2 overflow-y-auto space-y-3" style="flex:1;">
+
+                <!-- Nombre + Contacto en fila -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1.5">Nombre</label>
+                        <input id="pedido-nombre" type="text" placeholder="Tu nombre" autocomplete="given-name"
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+                    </div>
+                    <div>
+                        <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1.5">Contacto</label>
+                        <input id="pedido-contacto" type="tel" placeholder="3624..." autocomplete="tel"
+                            class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+                    </div>
                 </div>
+
+                <!-- Medio de pago — botones táctiles -->
                 <div>
-                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Contacto</label>
-                    <input id="pedido-contacto" type="text" placeholder="Tú número" class="w-full bg-white/5 border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700">
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1.5">Medio de pago</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btn-pago-efectivo" onclick="seleccionarPago('Efectivo')"
+                            class="pago-opcion py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-money-bill-wave text-sm"></i> Efectivo
+                        </button>
+                        <button type="button" id="btn-pago-transferencia" onclick="seleccionarPago('Transferencia')"
+                            class="pago-opcion py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-mobile-screen text-sm"></i> Transferencia
+                        </button>
+                    </div>
+                    <input type="hidden" id="pedido-pago" value="">
                 </div>
+
+                <!-- Entrega -->
                 <div>
-                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">Medio de pago preferido</label>
-                    <select id="pedido-pago" class="w-full bg-[#111] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all appearance-none cursor-pointer">
-                        <option value="" disabled selected>Seleccioná una opción</option>
-                        <option value="Efectivo">Efectivo</option>
-                        <option value="Transferencia">Transferencia</option>
-                    </select>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1.5">Entrega</label>
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="btn-retiro" onclick="seleccionarEnvio('No')"
+                            class="envio-opcion py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-store text-sm"></i> Retiro en local
+                        </button>
+                        <button type="button" id="btn-envio" onclick="seleccionarEnvio('Si')"
+                            class="envio-opcion py-2.5 px-3 rounded-xl border border-white/10 bg-white/5 text-white/50 text-[10px] font-bold uppercase tracking-wider transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-motorcycle text-sm"></i>
+                            <span>Envío <span class="text-[#d4af37]">+$2.000</span></span>
+                        </button>
+                    </div>
+                    <input type="hidden" id="pedido-envio" value="">
                 </div>
-                <div>
-                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-2">¿Necesitás envío?</label>
-                    <select id="pedido-envio" onchange="actualizarResumenEnvio()" class="w-full bg-[#111] border border-white/10 rounded-2xl px-4 py-3 text-sm text-white outline-none focus:border-[#d4af37] transition-all appearance-none cursor-pointer">
-                        <option value="" disabled selected>Seleccioná una opción</option>
-                        <option value="Si">Sí, con envío</option>
-                        <option value="No">No, retiro en tienda</option>
-                    </select>
-                    <p class="text-[10px] text-gray-600 mt-1.5 ml-1">El envío tiene un costo adicional de <span class="text-[#d4af37]">$2.000</span></p>
-                </div>
+
                 <!-- Resumen de costos -->
-                <div id="resumen-envio" class="hidden rounded-2xl overflow-hidden border border-white/8" style="background:rgba(255,255,255,0.03);">
-                    <div class="px-4 py-3 flex justify-between items-center border-b border-white/5">
+                <div id="resumen-envio" class="hidden rounded-xl overflow-hidden border border-white/8" style="background:rgba(255,255,255,0.03);">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-white/5">
                         <span class="text-[11px] text-gray-400">Subtotal productos</span>
                         <span id="resumen-subtotal" class="text-[11px] text-white font-semibold"></span>
                     </div>
-                    <div class="px-4 py-3 flex justify-between items-center border-b border-white/5">
+                    <div class="px-4 py-2.5 flex justify-between items-center border-b border-white/5">
                         <span class="text-[11px] text-gray-400">Envío</span>
                         <span id="resumen-costo-envio" class="text-[11px] text-[#d4af37] font-semibold"></span>
                     </div>
-                    <div class="px-4 py-3 flex justify-between items-center">
+                    <div class="px-4 py-2.5 flex justify-between items-center">
                         <span class="text-[11px] font-bold uppercase tracking-widest text-white">Total</span>
                         <span id="resumen-total" class="text-[13px] font-black text-white"></span>
                     </div>
                 </div>
+
+                <!-- Observaciones -->
+                <div>
+                    <label class="block text-[9px] font-bold uppercase tracking-[0.2em] text-gray-500 mb-1.5">
+                        Observaciones <span class="normal-case font-normal tracking-normal">(opcional)</span>
+                    </label>
+                    <textarea id="pedido-observacion" rows="2" placeholder="Ej: horario preferido, referencia de entrega..."
+                        class="w-full bg-white/5 border border-white/10 rounded-xl px-3 py-2.5 text-sm text-white outline-none focus:border-[#d4af37] transition-all placeholder:text-gray-700 resize-none"></textarea>
+                </div>
+
             </div>
-            <div class="px-7 py-5 flex-shrink-0">
-                <button id="btn-confirmar-pedido" onclick="confirmarPedido()" class="w-full bg-[#d4af37] text-black py-4 rounded-full font-black uppercase tracking-widest text-xs hover:bg-white transition-all">
+
+            <!-- Botón confirmar -->
+            <div class="px-6 pt-3 pb-6 flex-shrink-0">
+                <button id="btn-confirmar-pedido" onclick="confirmarPedido()"
+                    class="w-full bg-[#d4af37] text-black py-4 rounded-full font-black uppercase tracking-widest text-xs hover:bg-white transition-all">
                     <span class="btn-confirmar-text">Enviar pedido</span>
                     <div class="btn-confirmar-spinner hidden w-4 h-4 border-2 border-black/30 border-t-black rounded-full animate-spin mx-auto"></div>
                 </button>
             </div>
+
         </div>
     </div>
 
